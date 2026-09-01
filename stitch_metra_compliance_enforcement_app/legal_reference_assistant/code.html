@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>METRA - Legal Reference Assistant</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Source+Serif+4:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#fed255",
+                        "on-secondary-container": "#735a00",
+                        "tertiary-fixed": "#ffdcc2",
+                        "on-error-container": "#93000a",
+                        "primary-fixed": "#d5e3ff",
+                        "outline-variant": "#c4c6cf",
+                        "on-tertiary-fixed-variant": "#643e1b",
+                        "on-primary-fixed-variant": "#314769",
+                        "on-tertiary-container": "#b38259",
+                        "surface-container-low": "#f3f4f5",
+                        "on-background": "#191c1d",
+                        "surface-container-high": "#e7e8e9",
+                        "primary-fixed-dim": "#b1c7f0",
+                        "tertiary-container": "#3c1d00",
+                        "on-tertiary-fixed": "#2e1500",
+                        "secondary": "#755b00",
+                        "on-primary-container": "#778db2",
+                        "primary-container": "#0b2545",
+                        "surface-variant": "#e1e3e4",
+                        "on-secondary": "#ffffff",
+                        "surface-container-highest": "#e1e3e4",
+                        "outline": "#74777f",
+                        "inverse-surface": "#2e3132",
+                        "surface-tint": "#495f82",
+                        "surface-container": "#edeeef",
+                        "inverse-primary": "#b1c7f0",
+                        "inverse-on-surface": "#f0f1f2",
+                        "on-surface": "#191c1d",
+                        "on-secondary-fixed": "#241a00",
+                        "surface-bright": "#f8f9fa",
+                        "on-secondary-fixed-variant": "#584400",
+                        "tertiary": "#1d0b00",
+                        "background": "#f8f9fa",
+                        "error-container": "#ffdad6",
+                        "surface": "#f8f9fa",
+                        "error": "#ba1a1a",
+                        "secondary-fixed-dim": "#ecc246",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed-dim": "#f3bb8e",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface-variant": "#44474e",
+                        "primary": "#001026",
+                        "surface-dim": "#d9dadb",
+                        "on-primary-fixed": "#001c3b",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed": "#ffe08e",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px",
+                        "container-max": "1200px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "data-point": ["Inter"],
+                        "body-md": ["Inter"],
+                        "trust-score": ["\"Source Serif 4\""],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "data-point": ["18px", { "lineHeight": "24px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "trust-score": ["48px", { "lineHeight": "48px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface h-full flex flex-col antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopAppBar -->
+<header class="bg-surface border-b border-outline-variant docked full-width top-0 flat no shadows flex justify-between items-center w-full px-margin-mobile h-16 shrink-0 z-10 md:hidden">
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary opacity-80 transition-opacity duration-150">METRA</h1>
+</div>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-variant border border-outline-variant">
+<img alt="Field Officer Avatar" class="w-full h-full object-cover" data-alt="Professional headshot of a female field officer in a navy blazer, looking confident and official. Soft, even lighting suitable for an ID photo. Serious and administrative mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfHchsOAvucHT2SeYkiZWUtlqdlEXgDhjy_lIVuhnKV_BZJ6lWKKVtXhLCM66z6Jt9gdiN5VSejaOWPBETAX7Vwhx8MxGDjsFqoKqnT98prz9xNmd7yS-rn4zLJ1MashCoP8o0IEl5whJXrGGRVGiEgaJp1VokZqg9zYvG1JetYuK7dVw__8zQNCnb7X2AayiIlxMLzw7bLfdExI6svxfcV54pADv3mGQWdARjPgMLjutL97gsqoYl"/>
+</div>
+</header>
+<!-- Top Nav Web -->
+<header class="hidden md:flex bg-surface border-b border-outline-variant flex-row justify-between items-center w-full px-margin-desktop h-16 shrink-0 z-10">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">METRA</h1>
+</div>
+<nav class="flex gap-6 h-full items-center">
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container-high px-4 py-2 rounded-md transition-colors" href="#">Dashboard</a>
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container-high px-4 py-2 rounded-md transition-colors" href="#">Scan</a>
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container-high px-4 py-2 rounded-md transition-colors" href="#">Risk Queue</a>
+<a class="font-label-caps text-label-caps text-primary opacity-80 bg-surface-container-high px-4 py-2 rounded-md font-bold" href="#">Assistant</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-variant border border-outline-variant">
+<img alt="Field Officer Avatar" class="w-full h-full object-cover" data-alt="Professional headshot of a female field officer in a navy blazer, looking confident and official. Soft, even lighting suitable for an ID photo. Serious and administrative mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5yfqV75rFg2syM4D5xY1xLVSAwzMI0UPUg_6QFAMcQnDCP047Alz7U46mP24uW0R9A4X3VlUeemmzkyyocFh2FwWRDtJdv6GYEmwgEBubqRCIze0WegGPMpWUMy5yN7JsDB0h3Vgpcvvi-jmBynlbySngjRNDxZ4bbmdHIj08pfsSfK-RN7lJbUZxgRPjUqEhTskmBgl0760IYvai93DzFzOmQ3qDd791iO-F9_icB8KjcTHRjtQF"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden relative">
+<!-- NavigationDrawer (Hidden on mobile, visible on lg if needed, but per instructions web uses TopAppBar for full nav cluster. Keeping structural requirement but hidden unless intended as persistent side nav. Instructions state "On WEB... use the full nav cluster in the TopAppBar". So we hide this on general desktop and let TopAppBar handle it, or only show if specifically toggled.) -->
+<aside class="hidden bg-surface border-r border-outline-variant h-full w-80 rounded-r-none flex-col py-8 gap-unit z-20 absolute lg:relative transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
+<div class="px-6 mb-8 flex flex-col gap-2">
+<div class="w-16 h-16 rounded-full overflow-hidden bg-surface-variant border border-outline-variant mb-2">
+<img alt="Officer Profile" class="w-full h-full object-cover" data-alt="Professional headshot of a female field officer in a navy blazer, looking confident and official. Soft, even lighting suitable for an ID photo. Serious and administrative mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuATSX_rJgDhrmShHIy8ofEpp2ckfbe8WPUYp3oAXETuiNwhroHz2-Uws_P9JRyPtJ721p-IA01wWFyXkguETqEB9pHnoshSAsHUz9XTq4hd5YYBDa5vnEQdB6RafCsxTOJzONPr9dB3mOGEiTrJgAwdMrGtD_peRK_hFIR4mdKTgclQTz2wvHAJxMKKKRyoAbdbj-F0XKyvE5VVvG9XHFRvWsOsukVYGX7pl-r2Cst9OfhVFM_PRDvH"/>
+</div>
+<h2 class="font-headline-md text-headline-md font-bold text-primary">Insp. Sarah Miller</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">District 04 - Metrology</p>
+<p class="font-label-caps text-label-caps text-outline">ID: 992834</p>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-4 px-6 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined" data-icon="rule">rule</span>Inspections</a>
+<a class="flex items-center gap-4 px-6 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined" data-icon="gavel">gavel</span>Enforcement</a>
+<a class="flex items-center gap-4 px-6 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>Manuals</a>
+<a class="flex items-center gap-4 px-6 py-3 font-body-md text-body-md text-on-surface-variant hover:bg-surface-container-low transition-colors" href="#"><span class="material-symbols-outlined" data-icon="settings">settings</span>Settings</a>
+<div class="border-t border-outline-variant my-2 mx-6"></div>
+<a class="flex items-center gap-4 px-6 py-3 font-body-md text-body-md text-error hover:bg-error-container transition-colors" href="#"><span class="material-symbols-outlined" data-icon="logout">logout</span>Logout</a>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-surface-container-lowest pb-20 md:pb-0 h-full relative">
+<!-- Chat Header -->
+<div class="px-margin-mobile md:px-margin-desktop py-4 border-b border-outline-variant bg-surface flex items-center gap-4 shrink-0">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-surface-variant border-2 border-primary shrink-0">
+<img alt="METRA AI Avatar" class="w-full h-full object-cover" data-alt="A highly detailed illustration of a sleek, minimalist digital assistant avatar represented by a stylized 'M' shield icon. Deep navy blue and crisp white colors. Professional, clinical, and authoritative aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCw1X1AtL9I83OcTqmpnNxfCLWK51RsW0YhAXbfXYZ4BVEGFHRvScq5uMwZX56_Up9zeA6WwtddlJZVPhhvonvu_aNSDl3aX9fA4iSi3qSi9HiGcOtEgfvv11Z0agU_jRgQFCg1_zit5HUbxoPxI6qKIBXvmsjbNnPGK7TJ4xU43K68zh4wl2C8zZ0w_2tp5nnaQKyxmKPNzyniKUJrG_6si7E4cp-DSgyVKzCTqpDLqRCd_6XnPBD0"/>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md font-bold text-primary">METRA</h2>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Answers based on Legal Metrology Rules, 2011</p>
+</div>
+</div>
+<!-- Chat History -->
+<div class="flex-1 overflow-y-auto p-margin-mobile md:p-margin-desktop space-y-6 bg-surface-bright flex flex-col scroll-smooth" id="chat-container">
+<!-- Date divider -->
+<div class="flex justify-center">
+<span class="bg-surface-variant text-on-surface-variant font-label-caps text-label-caps px-3 py-1 rounded-full">Today</span>
+</div>
+<!-- User Message -->
+<div class="flex justify-end w-full">
+<div class="bg-surface-container-high text-on-surface p-4 rounded-[6px] max-w-[85%] md:max-w-[70%] border border-outline-variant shadow-sm">
+<p class="font-body-md text-body-md">Does this imported packaged food product comply with the principal display panel requirements for MRP declaration? The sticker seems to cover the original text.</p>
+</div>
+</div>
+<!-- METRA Response -->
+<div class="flex justify-start w-full gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-variant border border-outline-variant shrink-0 mt-1">
+<img alt="METRA AI Avatar" class="w-full h-full object-cover" data-alt="A highly detailed illustration of a sleek, minimalist digital assistant avatar represented by a stylized 'M' shield icon. Deep navy blue and crisp white colors. Professional, clinical, and authoritative aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAW-eMEABHVdR4p-05Zw4FKGOdSswBPiguMkGcIn12NTkQyQG0hOJqN5BNWYdnlQ9B2YANzU1rl1hv_d8uY81tKPZdsaPuIm9z1X2yKOYHRtmO7TGmpZXMm___1fHPFz8KjTJHowcFJXf4zKVbU-QHCZOleVR5BjHob5aevMkuR8C39q_2NzpDogiDG9hJMGtN_pdal_TAnoWM9JR1MgUSNAzT5ou9fzwEx4DiPM-UscxYgiV5dEkyn"/>
+</div>
+<div class="bg-surface-container-lowest text-on-surface p-4 rounded-[6px] max-w-[85%] md:max-w-[70%] border border-outline-variant border-l-2 border-l-primary shadow-sm flex flex-col gap-3">
+<p class="font-body-md text-body-md">Based on the visual evidence and regulations, covering original declarations with a sticker for MRP is subject to specific conditions.</p>
+<p class="font-body-md text-body-md">Affixing individual stickers on the package for altering or making declaration is not permissible. However, for reducing the Maximum Retail Price (MRP), a sticker with the revised lower MRP (inclusive of all taxes) may be affixed, provided that the original MRP remains legible.</p>
+<div class="bg-surface-container px-3 py-2 rounded border border-outline-variant mt-2">
+<p class="font-label-caps text-label-caps text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="gavel">gavel</span>
+                                Source: Rule 6(1)(a) &amp; Rule 18(2), Legal Metrology (Packaged Commodities) Rules, 2011.
+                             </p>
+</div>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex justify-end w-full">
+<div class="bg-surface-container-high text-on-surface p-4 rounded-[6px] max-w-[85%] md:max-w-[70%] border border-outline-variant shadow-sm">
+<p class="font-body-md text-body-md">What if the original price was 500 INR and the sticker says 600 INR?</p>
+</div>
+</div>
+<!-- METRA Response -->
+<div class="flex justify-start w-full gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-variant border border-outline-variant shrink-0 mt-1">
+<img alt="METRA AI Avatar" class="w-full h-full object-cover" data-alt="A highly detailed illustration of a sleek, minimalist digital assistant avatar represented by a stylized 'M' shield icon. Deep navy blue and crisp white colors. Professional, clinical, and authoritative aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMnegu5VRqGczil66-B5xAwcpsoGS4qzBosQy_i9QLpa71KcrGJecpHHUAU98Ka7nmRifrZz-JRBX-mXkFdaursnUw61Z3LDwv4LalAFgUSf3Ycgh5tMqHypyJI-j08lqsuDxPPk4ESydhpSxrTNpQZQpXylga90I3t8xOuyRmTm9FyoQruZwWTsJD7Hu0U91IplJI2FodOSVaefejDhBCd0dk8HjmoZGk5-DhDFUcJsdNMSYDi2He"/>
+</div>
+<div class="bg-surface-container-lowest text-on-surface p-4 rounded-[6px] max-w-[85%] md:max-w-[70%] border border-outline-variant border-l-2 border-l-primary shadow-sm flex flex-col gap-3">
+<p class="font-body-md text-body-md">This constitutes a direct violation. No manufacturer or packer or importer shall alter the price on the wrapper once printed and used for packaging.</p>
+<p class="font-body-md text-body-md">Increasing the MRP via a sticker is strictly prohibited. Stickers can only be used to declare a price reduction.</p>
+<div class="flex gap-2 mt-2">
+<span class="bg-error-container text-on-error-container font-label-caps text-label-caps px-2 py-1 rounded border border-error">Violation Detected</span>
+</div>
+<div class="bg-surface-container px-3 py-2 rounded border border-outline-variant mt-2">
+<p class="font-label-caps text-label-caps text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="gavel">gavel</span>
+                                Source: Rule 18(2) &amp; 18(3), Legal Metrology (Packaged Commodities) Rules, 2011.
+                             </p>
+</div>
+</div>
+</div>
+<div id="anchor"></div>
+</div>
+<!-- Input Area -->
+<div class="bg-surface border-t border-outline-variant p-margin-mobile md:p-margin-desktop shrink-0">
+<div class="max-w-4xl mx-auto flex items-end gap-2 relative">
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant rounded-[6px] px-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none resize-none min-h-[56px] max-h-[120px]" placeholder="Ask about this product's compliance..." rows="1"></textarea>
+<button class="bg-primary text-on-primary h-[56px] w-[56px] rounded-[8px] flex items-center justify-center hover:bg-surface-tint transition-colors shrink-0 flex-col group">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+</button>
+</div>
+<p class="text-center font-label-caps text-label-caps text-on-surface-variant mt-3 opacity-60">METRA provides reference information only. Final determination rests with the inspecting officer.</p>
+</div>
+</main>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-surface-container-lowest border-t border-outline-variant pb-safe h-20 md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high px-4 py-1 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high px-4 py-1 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span class="font-label-caps text-label-caps mt-1">Scan</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high px-4 py-1 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="report_problem">report_problem</span>
+<span class="font-label-caps text-label-caps mt-1">Risk Queue</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="gavel" style="font-variation-settings: 'FILL' 1;">gavel</span>
+<span class="font-label-caps text-label-caps mt-1">Assistant</span>
+</a>
+</nav>
+<script>
+        // Auto-resize textarea
+        const textarea = document.querySelector('textarea');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if(this.value === '') {
+                this.style.height = '56px';
+            }
+        });
+
+        // Simple scroll to bottom on load
+        window.onload = function() {
+            var chatContainer = document.getElementById("chat-container");
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body></html>

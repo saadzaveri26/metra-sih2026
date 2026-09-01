@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Metra - Risk Queue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-container": "#fed255",
+                      "on-secondary-container": "#735a00",
+                      "tertiary-fixed": "#ffdcc2",
+                      "on-error-container": "#93000a",
+                      "primary-fixed": "#d5e3ff",
+                      "outline-variant": "#c4c6cf",
+                      "on-tertiary-fixed-variant": "#643e1b",
+                      "on-primary-fixed-variant": "#314769",
+                      "on-tertiary-container": "#b38259",
+                      "surface-container-low": "#f3f4f5",
+                      "on-background": "#191c1d",
+                      "surface-container-high": "#e7e8e9",
+                      "primary-fixed-dim": "#b1c7f0",
+                      "tertiary-container": "#3c1d00",
+                      "on-tertiary-fixed": "#2e1500",
+                      "secondary": "#755b00",
+                      "on-primary-container": "#778db2",
+                      "primary-container": "#0b2545",
+                      "surface-variant": "#e1e3e4",
+                      "on-secondary": "#ffffff",
+                      "surface-container-highest": "#e1e3e4",
+                      "outline": "#74777f",
+                      "inverse-surface": "#2e3132",
+                      "surface-tint": "#495f82",
+                      "surface-container": "#edeeef",
+                      "inverse-primary": "#b1c7f0",
+                      "inverse-on-surface": "#f0f1f2",
+                      "on-surface": "#191c1d",
+                      "on-secondary-fixed": "#241a00",
+                      "surface-bright": "#f8f9fa",
+                      "on-secondary-fixed-variant": "#584400",
+                      "tertiary": "#1d0b00",
+                      "background": "#f8f9fa",
+                      "error-container": "#ffdad6",
+                      "surface": "#f8f9fa",
+                      "error": "#ba1a1a",
+                      "secondary-fixed-dim": "#ecc246",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-fixed-dim": "#f3bb8e",
+                      "surface-container-lowest": "#ffffff",
+                      "on-surface-variant": "#44474e",
+                      "primary": "#001026",
+                      "surface-dim": "#d9dadb",
+                      "on-primary-fixed": "#001c3b",
+                      "on-primary": "#ffffff",
+                      "secondary-fixed": "#ffe08e",
+                      "on-error": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "unit": "4px",
+                      "margin-desktop": "32px",
+                      "gutter": "16px",
+                      "container-max": "1200px",
+                      "margin-mobile": "16px"
+              },
+              "fontFamily": {
+                      "data-point": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "trust-score": [
+                              "\"Source Serif 4\""
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "label-caps": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "data-point": [
+                              "18px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "trust-score": [
+                              "48px",
+                              {
+                                      "lineHeight": "48px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background font-body-md h-screen flex flex-col overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-dim text-primary dark:text-primary-fixed docked full-width top-0 border-b border-outline-variant dark:border-outline flat no shadows flex justify-between items-center w-full px-margin-mobile h-16 md:hidden z-10 shrink-0">
+<button class="flex items-center justify-center p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-opacity duration-150 rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim">
+            METRA
+        </div>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-opacity duration-150 rounded-full">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline-variant">
+<img alt="Field Officer Avatar" class="w-full h-full object-cover" data-alt="A professional headshot of a field officer in a minimalist, well-lit environment. Clinical and official mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvJxdiv26hZtXOxeGFodw0o0nvqZ3Eg_wX4ruC7bJ3eL-LFsXMnbtAsdzTN_9xdcRRHWDxZmVuWayF4hbghCFnTD1HgGQ9Es9sPUhoJfx07JWxE2NJscqUcpL-PERSpPyXaeZLJ7DGIjEwrp_dSJjRr68RzgeYTsEi1XnOO5Zzt33CWkMMrRnnX0b6DSm-cul3MaXq0jGfye62rG-TNhhyDqviUGmboUnKm4_M_jUIMpl77H3UJf47"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- NavigationDrawer (Desktop) -->
+<nav class="hidden md:flex flex-col h-full w-80 rounded-r-none border-r border-outline-variant dark:border-outline flat no shadows bg-surface dark:bg-surface-dim py-8 gap-unit z-10 shrink-0">
+<div class="px-gutter mb-6 flex flex-row items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline-variant shrink-0">
+<img alt="Officer Profile" class="w-full h-full object-cover" data-alt="A professional headshot of Sarah Miller, a district 04 metrology inspector, in a clinical, bright setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDau7322sI1AHhD-qKmGWoLymvS1hdLFFq6fL8P5PgWDzgOC8iO2bOm2HtzhAPwEGbB5RJ1a0ktoPgR70UdEdty8iNTlyul_oQyzNxw3r5FQ9AcFk-rE55D9BgRwqRrIlp_HQfqmg-1OC6Rp4QgAAtDNmk7UPVlEDkkXOGNa_HEVP4eqwZYPU-7LeHR_qkOuTl8AuUdrK-2v-M6x_dwoQuuWkKcYJTEKNLc20WloGOZMCioKQZnTVz1"/>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-primary dark:text-primary-fixed truncate">Insp. Sarah Miller</span>
+<span class="font-body-md text-body-md text-on-surface-variant dark:text-outline-variant truncate">District 04 - Metrology</span>
+<span class="font-label-caps text-label-caps text-outline truncate">ID: 992834</span>
+</div>
+</div>
+<div class="flex flex-col flex-1 px-4 gap-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-low hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="rule">rule</span>
+<span class="font-body-md text-body-md">Inspections</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-r-full bg-secondary-container dark:bg-secondary-fixed text-on-secondary-container dark:text-on-secondary-fixed font-bold opacity-80 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="gavel">gavel</span>
+<span class="font-body-md text-body-md">Enforcement</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-low hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-body-md text-body-md">Manuals</span>
+</a>
+<div class="flex-1"></div>
+<a class="flex items-center gap-3 px-4 py-3 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-low hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-full text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-low hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-body-md text-body-md">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col bg-surface-container-lowest h-full overflow-hidden relative">
+<!-- Desktop Header -->
+<div class="hidden md:flex justify-between items-center px-margin-desktop py-6 border-b border-outline-variant shrink-0 bg-surface">
+<h1 class="font-headline-lg text-headline-lg text-primary">Risk Queue</h1>
+<button class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded hover:bg-surface-container transition-colors text-on-surface">
+<span class="material-symbols-outlined text-[20px]" data-icon="filter_list">filter_list</span>
+<span class="font-label-caps text-label-caps">FILTER</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-margin-mobile md:p-margin-desktop pb-32 md:pb-margin-desktop">
+<div class="max-w-container-max mx-auto flex flex-col gap-4">
+<!-- High Priority Card 1 -->
+<div class="relative bg-surface rounded-lg border border-outline-variant p-4 md:p-6 shadow-sm overflow-hidden before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-[#D64545]">
+<div class="flex flex-col md:flex-row gap-4">
+<div class="w-full md:w-32 h-32 bg-surface-variant rounded flex-shrink-0 border border-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A close-up photograph of an industrial scale, showing signs of tampering or wear. Clinical, high contrast, official documentation style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1D9vRQVEDn8tu-6R0XYlua1kjjDeCiPZda1WhGhslbQAX-3eJa9gZUvdbWtSu87BbIj64g3-l8Bb6uIS5ksXgCu7QZQw0YBlM1gbHY0J-ykM0S-4gkzhho6Sy7AcvFNakohhv026JvfsL3PLoxNr42osXVNILFbn_rnymNVDjwAiesKKYBC5-_qMrreaatCu8VKxmR2sXLj2Ev2le1WliAk_QxnzPa6Uu-ksRQjpg5skrrftWs3CD"/>
+</div>
+<div class="flex-1 flex flex-col justify-between">
+<div class="flex justify-between items-start mb-2">
+<div>
+<div class="font-label-caps text-label-caps text-[#D64545] mb-1">CRITICAL RISK</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Industrial Scale Tampering</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Seller: Apex Logistics Corp.</p>
+</div>
+<div class="flex flex-col items-end">
+<div class="bg-[#ffdad6] text-[#ba1a1a] px-3 py-1 rounded font-data-point text-data-point border border-[#ba1a1a] border-opacity-20 flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]" data-icon="warning">warning</span>
+                                            92
+                                        </div>
+</div>
+</div>
+<div class="font-body-md text-body-md text-on-surface">
+                                    Repeated calibration failures reported over 3 consecutive quarters. Evidence suggests intentional bypass of security seals on model TX-200.
+                                </div>
+<div class="mt-4 flex gap-2">
+<button class="px-4 py-2 bg-primary text-on-primary rounded font-label-caps text-label-caps hover:bg-surface-tint transition-colors">INITIATE REVIEW</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Medium Priority Card -->
+<div class="relative bg-surface rounded-lg border border-outline-variant p-4 flex flex-row gap-4 items-center before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-[#D97706]">
+<div class="w-16 h-16 bg-surface-variant rounded flex-shrink-0 border border-outline-variant overflow-hidden hidden sm:block">
+<img class="w-full h-full object-cover" data-alt="A clear image of retail packaging for a volume measuring cup, well lit, clinical presentation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfw-KrUJsoKbb60VwE_sr_DoZyzN-ajq2dOPb7YieP_XrnDVX6VO3sH_p0-QKIIg2iTa-CpPeVRS_cOlGDArPdZsjR2J_SvkQXv-YClkAYw9F1TyZx4fvKI0uWRgGdPbsCNx2d6SaZ_VrPrPx7Tmulj3UAIApHtDcn6rSKMLtGqUeDcQJJNyGJiiBhgQhHvWSt8xzvuvCysGxHx5QOTCFYplnj4vy0ay--eBhmqEW_YUPKjhKz0dNZ"/>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-body-md text-body-md font-bold text-on-surface truncate">Volume Discrepancy - Retail Liquids</h3>
+<p class="font-label-caps text-label-caps text-on-surface-variant truncate">Seller: Oasis Beverages</p>
+</div>
+<div class="flex-shrink-0">
+<div class="bg-secondary-fixed text-on-secondary-fixed-variant px-2 py-1 rounded font-data-point text-data-point border border-secondary border-opacity-20 flex items-center gap-1 text-[14px]">
+                                64
+                            </div>
+</div>
+</div>
+<!-- Low Priority Card -->
+<div class="relative bg-surface rounded-lg border border-outline-variant p-4 flex flex-row gap-4 items-center before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-outline-variant">
+<div class="w-16 h-16 bg-surface-variant rounded flex-shrink-0 border border-outline-variant overflow-hidden hidden sm:block">
+<img class="w-full h-full object-cover" data-alt="A standard digital thermometer resting on a white surface, top down view, clinical." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA670-OwWXzqCxn3O64re6bLkisAC5oxY8g3qPCuAx_vXpWSRklWXFDoYFmsp75K_uoo2FYeWhQCDNclx6MKpAjO8TxwRQkBMPnEvqiuWsRll-QymfFqLd6ZY9udAZoW0JilvyBhTKUGQvAvD9IEigPxvftEo_hTz2ErCZnbnBvyWNPbKuooLE3oMN4DO-ZvQ_rawCdg6WHNQMsuWx27tpmo2ezq59opq14BrteJIXHOJA83lVX9cgQ"/>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="font-body-md text-body-md font-bold text-on-surface truncate">Routine Calibration Check</h3>
+<p class="font-label-caps text-label-caps text-on-surface-variant truncate">Seller: Metro Health Supplies</p>
+</div>
+<div class="flex-shrink-0">
+<div class="bg-surface-variant text-on-surface px-2 py-1 rounded font-data-point text-data-point border border-outline-variant flex items-center gap-1 text-[14px]">
+                                28
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Contextual FAB (Suppressed based on logic for transactional/list screens unless specifically requested. The prompt specifically requested it.) -->
+<button class="absolute bottom-6 right-6 md:bottom-10 md:right-10 w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center hover:bg-surface-tint transition-colors z-40 mb-20 md:mb-0">
+<span class="material-symbols-outlined text-[24px]" data-icon="add">add</span>
+</button>
+</main>
+</div>
+<!-- BottomNavBar (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-surface-container-lowest dark:bg-surface-container-low pb-safe border-t border-outline-variant dark:border-outline flat no shadows h-20 md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span class="font-label-caps text-label-caps mt-1">Scan</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary-fixed-dim text-on-primary-container dark:text-on-primary-fixed rounded-xl px-4 py-1 opacity-80 scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="report_problem">report_problem</span>
+<span class="font-label-caps text-label-caps mt-1">Risk Queue</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="gavel">gavel</span>
+<span class="font-label-caps text-label-caps mt-1">Assistant</span>
+</a>
+</nav>
+</body></html>
