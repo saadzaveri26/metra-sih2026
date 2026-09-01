@@ -12,14 +12,14 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 ---
 
 ## Phase 1 — Foundations & Skeleton App
-- [ ] Repo structure finalized (this file + UPDATES.txt in place)
-- [ ] Next.js frontend scaffolded (`app_build/frontend`)
-- [ ] FastAPI backend scaffolded (`app_build/backend`)
-- [ ] Frontend successfully calls backend `/health` endpoint
-- [ ] Pushed to GitHub
+- [x] Repo structure finalized (this file + UPDATES.txt in place)
+- [x] Next.js frontend scaffolded (`app_build/frontend`)
+- [x] FastAPI backend scaffolded (`app_build/backend`)
+- [x] Frontend successfully calls backend `/health` endpoint
+- [x] Pushed to GitHub
 
 ## Phase 2 — Image Upload + OCR Extraction
-- [ ] Image upload UI (drag/drop or camera capture)
+- [~] Image upload UI (drag/drop or camera capture)
 - [ ] Backend endpoint accepts image, runs PaddleOCR
 - [ ] Returns extracted text blocks + bounding box coordinates as JSON
 - [ ] Tested on 3–5 real product label photos
