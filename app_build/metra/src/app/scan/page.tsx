@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   scanImage,
   ApiError,
@@ -14,8 +14,28 @@ import BoundingBoxOverlay, {
 } from "@/components/BoundingBoxOverlay";
 import { CameraIcon, UploadIcon, ChevronDownIcon } from "@/components/icons";
 import Avatar, { type AvatarState } from "@/components/Avatar";
+import DeclarationsPanel from "@/components/DeclarationsPanel";
 
 type ViewState = "idle" | "loading" | "error" | "result";
+
+// Steps shown during OCR processing
+const SCAN_STEPS = [
+  { label: "Running OCR", detail: "Extracting text from label image…" },
+  { label: "Structuring Fields", detail: "Mapping text to mandatory declarations…" },
+  { label: "Compliance Check", detail: "Evaluating against Legal Metrology Rules 2011…" },
+];
+
+function useLoadingStep(active: boolean) {
+  const [stepIdx, setStepIdx] = useState(0);
+  useEffect(() => {
+    if (!active) { setStepIdx(0); return; }
+    setStepIdx(0);
+    const t1 = setTimeout(() => setStepIdx(1), 3000);
+    const t2 = setTimeout(() => setStepIdx(2), 6500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [active]);
+  return stepIdx;
+}
 
 export default function ScanPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -25,6 +45,7 @@ export default function ScanPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResponse | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const loadingStep = useLoadingStep(state === "loading");
 
   function handleFileSelect(f: File) {
     setFile(f);
@@ -124,13 +145,7 @@ export default function ScanPage() {
           </div>
 
           {state === "loading" && (
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low py-4">
-              <Avatar state="loading" className="h-40 w-auto object-contain" />
-              <p className="text-center text-xs text-on-surface-variant px-6">
-                Running OCR and checking against Legal Metrology rules — this
-                can take a moment on first run while models load.
-              </p>
-            </div>
+            <ScanLoadingCard stepIdx={loadingStep} />
           )}
         </div>
       )}
@@ -147,6 +162,60 @@ export default function ScanPage() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Loading card with step-progress indicator
+// ---------------------------------------------------------------------------
+function ScanLoadingCard({ stepIdx }: { stepIdx: number }) {
+  return (
+    <div className="flex flex-col items-center gap-4 rounded-xl border border-outline-variant bg-surface-container-low py-6 px-4">
+      <Avatar state="loading" className="h-36 w-auto object-contain" />
+
+      {/* Step progress */}
+      <div className="w-full space-y-2">
+        {SCAN_STEPS.map((step, i) => {
+          const done = i < stepIdx;
+          const active = i === stepIdx;
+          return (
+            <div key={step.label} className="flex items-start gap-3">
+              {/* indicator */}
+              <div
+                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-colors ${
+                  done
+                    ? "bg-compliant text-white"
+                    : active
+                      ? "bg-primary-container text-on-primary animate-pulse"
+                      : "bg-surface-container-high text-on-surface-variant"
+                }`}
+              >
+                {done ? "✓" : i + 1}
+              </div>
+              <div>
+                <p
+                  className={`text-sm font-semibold ${
+                    active ? "text-on-surface" : done ? "text-compliant" : "text-on-surface-variant"
+                  }`}
+                >
+                  {step.label}
+                </p>
+                {active && (
+                  <p className="text-xs text-on-surface-variant">{step.detail}</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-center text-xs text-on-surface-variant">
+        First-run may take longer while the OCR model warms up.
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Upload zone
+// ---------------------------------------------------------------------------
 function UploadZone({
   inputRef,
   onSelect,
@@ -194,6 +263,46 @@ function UploadZone({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Raw OCR text fallback accordion (shown when no bounding boxes are available)
+// ---------------------------------------------------------------------------
+function RawOcrAccordion({ blocks }: { blocks: ScanResponse["blocks"] }) {
+  const [open, setOpen] = useState(false);
+  if (!blocks || blocks.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-outline-variant">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
+      >
+        <p className="text-sm font-semibold text-on-surface">
+          Raw OCR text ({blocks.length} blocks detected)
+        </p>
+        <ChevronDownIcon
+          width={16}
+          height={16}
+          className={`text-on-surface-variant transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="max-h-48 overflow-y-auto border-t border-outline-variant px-4 py-3 space-y-1">
+          {blocks.map((b, i) => (
+            <p key={i} className="text-xs text-on-surface-variant">
+              <span className="font-semibold text-on-surface">{b.text}</span>
+              <span className="ml-2 opacity-60">({(b.confidence * 100).toFixed(0)}%)</span>
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Compliance result view
+// ---------------------------------------------------------------------------
 function ComplianceResultView({
   result,
   imageUrl,
@@ -205,7 +314,7 @@ function ComplianceResultView({
   overlayBoxes: OverlayBox[];
   onRescan: () => void;
 }) {
-  const { compliance_summary, compliance_results } = result;
+  const { compliance_summary, compliance_results, structured_fields, blocks } = result;
   const score = Math.round(
     (compliance_summary.compliant_count / Math.max(compliance_summary.total_fields_checked, 1)) *
       100
@@ -224,9 +333,11 @@ function ComplianceResultView({
     NON_COMPLIANT: "Violation Detected",
   };
 
+  const hasOverlays = overlayBoxes.length > 0;
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Verdict banner with avatar reaction */}
+      {/* Verdict banner */}
       <section className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-container-low p-3">
         <Avatar state={avatarState} className="h-28 w-auto shrink-0 object-contain" />
         <div>
@@ -251,6 +362,18 @@ function ComplianceResultView({
           </span>
         </div>
         <BoundingBoxOverlay imageUrl={imageUrl} boxes={overlayBoxes} />
+
+        {!hasOverlays && (
+          <div className="mt-2 rounded-lg bg-surface-container px-3 py-2.5 text-sm text-on-surface-variant">
+            <p className="font-semibold text-on-surface">No region overlays available</p>
+            <p className="mt-0.5 text-xs">
+              OCR extracted text but could not map bounding boxes to mandatory declaration
+              regions. This is common on scanned (non-photo) images. Check the raw OCR text
+              and Extracted Declarations below for what was read.
+            </p>
+          </div>
+        )}
+
         <div className="mt-2 flex items-center gap-4 text-xs font-medium">
           <span className="flex items-center gap-1.5 text-compliant">
             <span className="h-2 w-2 rounded-full bg-compliant" /> Compliant
@@ -262,7 +385,16 @@ function ComplianceResultView({
             <span className="h-2 w-2 rounded-full bg-violation" /> Non-Compliant
           </span>
         </div>
+
+        {!hasOverlays && blocks && blocks.length > 0 && (
+          <div className="mt-3">
+            <RawOcrAccordion blocks={blocks} />
+          </div>
+        )}
       </section>
+
+      {/* ── Phase 3: Extracted Declarations ── */}
+      <DeclarationsPanel structuredFields={structured_fields} />
 
       {/* Score */}
       <section className="flex items-center justify-between rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
@@ -313,6 +445,9 @@ function ComplianceResultView({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Rule row
+// ---------------------------------------------------------------------------
 function RuleRow({
   field,
   result,

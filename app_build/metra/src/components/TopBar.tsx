@@ -1,17 +1,9 @@
-import { MenuIcon } from "./icons";
 import Avatar from "./Avatar";
 
+/** TopBar is only shown on mobile (< lg). On desktop the sidebar nav replaces it. */
 export default function TopBar() {
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between border-b border-outline-variant bg-surface px-4 py-3">
-      <button
-        type="button"
-        aria-label="Open menu"
-        className="flex h-9 w-9 items-center justify-center text-on-surface"
-      >
-        <MenuIcon />
-      </button>
-
+    <header className="lg:hidden sticky top-0 z-20 flex items-center justify-between border-b border-outline-variant bg-surface px-4 py-3">
       <span className="text-[20px] font-bold tracking-tight text-primary-container">
         METRA
       </span>
