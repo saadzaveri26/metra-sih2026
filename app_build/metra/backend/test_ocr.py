@@ -2,7 +2,7 @@ from paddleocr import PaddleOCR
 
 ocr = PaddleOCR(use_textline_orientation=True, lang='en', enable_mkldnn=False)
 
-result = ocr.predict('sample_label.png')
+result = ocr.predict('sample_label1.jpg')
 
 for res in result:
     texts = res['rec_texts']
