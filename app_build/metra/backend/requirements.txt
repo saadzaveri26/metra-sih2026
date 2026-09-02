@@ -3,3 +3,6 @@ uvicorn
 python-multipart
 paddlepaddle
 paddleocr
+pillow
+reportlab
+python-docx

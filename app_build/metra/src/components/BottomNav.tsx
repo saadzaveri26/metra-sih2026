@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { DashboardIcon, ScanIcon, RiskIcon, AssistantIcon } from "./icons";
+import { DashboardIcon, ScanIcon, RiskIcon, AssistantIcon, HistoryIcon } from "./icons";
 import Avatar from "./Avatar";
 
 const TABS = [
   { href: "/", label: "Dashboard", icon: DashboardIcon },
   { href: "/scan", label: "Scan", icon: ScanIcon },
+  { href: "/history", label: "History", icon: HistoryIcon },
   { href: "/risk-queue", label: "Risk Queue", icon: RiskIcon },
   { href: "/assistant", label: "Assistant", icon: AssistantIcon },
 ];
@@ -18,7 +19,7 @@ export default function BottomNav() {
   return (
     <>
       {/* ── Mobile: bottom tab bar ── */}
-      <nav className="lg:hidden sticky bottom-0 z-20 grid grid-cols-4 border-t border-outline-variant bg-surface-container-lowest">
+      <nav className="lg:hidden sticky bottom-0 z-20 grid grid-cols-5 border-t border-outline-variant bg-surface-container-lowest">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);

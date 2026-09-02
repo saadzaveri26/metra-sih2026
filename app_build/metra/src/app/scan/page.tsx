@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   scanImage,
+  downloadInspectionReport,
   ApiError,
   type ScanResponse,
-  type ComplianceStatus,
+  type ReportFormat,
 } from "@/lib/api";
 import { FIELD_LABELS, FIELD_ORDER } from "@/lib/fields";
 import StatusChip, { statusBorderColor } from "@/components/StatusChip";
@@ -15,6 +16,7 @@ import BoundingBoxOverlay, {
 import { CameraIcon, UploadIcon, ChevronDownIcon } from "@/components/icons";
 import Avatar, { type AvatarState } from "@/components/Avatar";
 import DeclarationsPanel from "@/components/DeclarationsPanel";
+import FontAnalysisPanel from "@/components/FontAnalysisPanel";
 
 type ViewState = "idle" | "loading" | "error" | "result";
 
@@ -40,6 +42,8 @@ function useLoadingStep(active: boolean) {
 export default function ScanPage() {
   const [file, setFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [productName, setProductName] = useState("");
+  const [sellerName, setSellerName] = useState("");
   const [isImported, setIsImported] = useState(false);
   const [state, setState] = useState<ViewState>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +64,7 @@ export default function ScanPage() {
     setState("loading");
     setError(null);
     try {
-      const res = await scanImage(file, isImported);
+      const res = await scanImage(file, isImported, productName, sellerName);
       setResult(res);
       setState("result");
     } catch (err) {
@@ -83,13 +87,23 @@ export default function ScanPage() {
 
   const overlayBoxes: OverlayBox[] = useMemo(() => {
     if (!result) return [];
+    if (result.region_overlays && result.region_overlays.length > 0) {
+      return result.region_overlays.map((o) => ({
+        field: o.field,
+        status: o.status,
+        points: o.bounding_box,
+        kind: o.kind,
+        rule_reference: o.rule_reference,
+        findings: o.findings,
+      }));
+    }
     const boxes: OverlayBox[] = [];
     for (const field of Object.keys(result.compliance_results)) {
       const compliance = result.compliance_results[field];
       const bbox =
         compliance.bounding_box ?? result.structured_fields[field]?.bounding_box;
       if (bbox) {
-        boxes.push({ field, status: compliance.status, points: bbox });
+        boxes.push({ field, status: compliance.status, points: bbox, kind: "matched" });
       }
     }
     return boxes;
@@ -110,15 +124,37 @@ export default function ScanPage() {
             <img src={imageUrl} alt="Selected product label" className="block w-full" />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-on-surface-variant">
-            <input
-              type="checkbox"
-              checked={isImported}
-              onChange={(e) => setIsImported(e.target.checked)}
-              className="h-4 w-4 accent-[var(--color-primary-container)]"
-            />
-            This is an imported commodity
-          </label>
+          <div className="flex flex-col gap-3">
+            <label className="text-sm text-on-surface">
+              Product name
+              <input
+                type="text"
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+                placeholder="e.g. Britannia Marie Gold 250 g"
+                className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface"
+              />
+            </label>
+            <label className="text-sm text-on-surface">
+              Seller / establishment
+              <input
+                type="text"
+                value={sellerName}
+                onChange={(e) => setSellerName(e.target.value)}
+                placeholder="e.g. Kirana Mart, MG Road"
+                className="mt-1 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface"
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-on-surface-variant">
+              <input
+                type="checkbox"
+                checked={isImported}
+                onChange={(e) => setIsImported(e.target.checked)}
+                className="h-4 w-4 accent-[var(--color-primary-container)]"
+              />
+              This is an imported commodity
+            </label>
+          </div>
 
           {state === "error" && (
             <p className="rounded-lg bg-violation-container px-3 py-2 text-sm text-violation">
@@ -155,6 +191,7 @@ export default function ScanPage() {
           result={result}
           imageUrl={imageUrl}
           overlayBoxes={overlayBoxes}
+          file={file}
           onRescan={handleReset}
         />
       )}
@@ -307,14 +344,34 @@ function ComplianceResultView({
   result,
   imageUrl,
   overlayBoxes,
+  file,
   onRescan,
 }: {
   result: ScanResponse;
   imageUrl: string;
   overlayBoxes: OverlayBox[];
+  file: File | null;
   onRescan: () => void;
 }) {
   const { compliance_summary, compliance_results, structured_fields, blocks } = result;
+  const [activeField, setActiveField] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<ReportFormat | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function handleExport(format: ReportFormat) {
+    if (!file) return;
+    setExporting(format);
+    setExportError(null);
+    try {
+      await downloadInspectionReport(file, result, format);
+    } catch (err) {
+      setExportError(
+        err instanceof ApiError ? err.message : "Could not export the inspection report."
+      );
+    } finally {
+      setExporting(null);
+    }
+  }
   const score = Math.round(
     (compliance_summary.compliant_count / Math.max(compliance_summary.total_fields_checked, 1)) *
       100
@@ -345,6 +402,13 @@ function ComplianceResultView({
           <p className="text-lg font-bold text-on-surface">
             {verdictCopy[compliance_summary.overall_status]}
           </p>
+          {(result.id || result.product_name) && (
+            <p className="text-xs text-on-surface-variant">
+              {result.id ? `Saved ${result.id}` : "Not saved"}
+              {result.product_name ? ` · ${result.product_name}` : ""}
+              {result.seller_name ? ` · ${result.seller_name}` : ""}
+            </p>
+          )}
           <p className="text-sm text-on-surface-variant">
             {compliance_summary.compliant_count} compliant &middot;{" "}
             {compliance_summary.review_count} needs review &middot;{" "}
@@ -361,7 +425,16 @@ function ComplianceResultView({
             Label Scan
           </span>
         </div>
-        <BoundingBoxOverlay imageUrl={imageUrl} boxes={overlayBoxes} />
+        <BoundingBoxOverlay
+          imageUrl={imageUrl}
+          boxes={overlayBoxes}
+          activeField={activeField}
+          onSelectField={setActiveField}
+        />
+        <p className="mt-2 text-[11px] text-on-surface-variant">
+          Tap a region for the rule reference. Dashed boxes are nearest OCR candidates or
+          missing-declaration markers on the image edge.
+        </p>
 
         {!hasOverlays && (
           <div className="mt-2 rounded-lg bg-surface-container px-3 py-2.5 text-sm text-on-surface-variant">
@@ -396,6 +469,10 @@ function ComplianceResultView({
       {/* ── Phase 3: Extracted Declarations ── */}
       <DeclarationsPanel structuredFields={structured_fields} />
 
+      {result.font_analysis && (
+        <FontAnalysisPanel analysis={result.font_analysis} />
+      )}
+
       {/* Score */}
       <section className="flex items-center justify-between rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
         <div>
@@ -419,12 +496,22 @@ function ComplianceResultView({
               key={field}
               field={field}
               result={compliance_results[field]}
+              highlighted={activeField === field}
+              onHighlight={() =>
+                setActiveField((cur) => (cur === field ? null : field))
+              }
             />
           ))}
         </ul>
       </section>
 
-      <div className="flex gap-3">
+      {exportError && (
+        <p className="rounded-lg bg-violation-container px-3 py-2 text-sm text-violation">
+          {exportError}
+        </p>
+      )}
+
+      <div className="flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
           onClick={onRescan}
@@ -434,11 +521,19 @@ function ComplianceResultView({
         </button>
         <button
           type="button"
-          disabled
-          title="Report export lands in Phase 7"
-          className="flex-1 rounded-lg bg-primary-container px-4 py-2.5 text-sm font-semibold text-on-primary opacity-60"
+          disabled={!file || exporting !== null}
+          onClick={() => handleExport("pdf")}
+          className="flex-1 rounded-lg bg-primary-container px-4 py-2.5 text-sm font-semibold text-on-primary disabled:opacity-60"
         >
-          Export Report
+          {exporting === "pdf" ? "Exporting PDF…" : "Export PDF"}
+        </button>
+        <button
+          type="button"
+          disabled={!file || exporting !== null}
+          onClick={() => handleExport("docx")}
+          className="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-semibold text-on-surface disabled:opacity-60"
+        >
+          {exporting === "docx" ? "Exporting DOCX…" : "Export DOCX"}
         </button>
       </div>
     </div>
@@ -451,18 +546,29 @@ function ComplianceResultView({
 function RuleRow({
   field,
   result,
+  highlighted,
+  onHighlight,
 }: {
   field: string;
   result: ScanResponse["compliance_results"][string];
+  highlighted: boolean;
+  onHighlight: () => void;
 }) {
   const [open, setOpen] = useState(result.status !== "COMPLIANT");
   const showDetail = result.status !== "COMPLIANT";
 
   return (
-    <li className={`border-l-4 ${statusBorderColor(result.status)}`}>
+    <li
+      className={`border-l-4 ${statusBorderColor(result.status)} ${
+        highlighted ? "bg-surface-container" : ""
+      }`}
+    >
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setOpen((o) => !o);
+          onHighlight();
+        }}
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
       >
         <div>

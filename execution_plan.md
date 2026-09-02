@@ -53,30 +53,28 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] Compliance Score (0–100) computed from compliant_count / total_fields
 
 ## Phase 5 — Font Size & Readability Analysis
-- [ ] Measure detected text height in image (OpenCV, using bbox pixel height +
+- [x] Measure detected text height in image (OpenCV, using bbox pixel height +
       image DPI/scale)
-- [ ] Compare against rule-mandated minimum font sizes
-- [ ] Flag violations separately from missing-declaration violations
+- [x] Compare against rule-mandated minimum font sizes
+- [x] Flag violations separately from missing-declaration violations
 
 ## Phase 6 — Bounding Box Overlay UI
 - [x] `BoundingBoxOverlay` component — SVG polygons over image using PaddleOCR bbox coords
 - [x] Green = compliant, Amber = needs review, Red = non-compliant field text region
 - [x] Field label rendered above each box
-- [ ] **Known limitation**: boxes only appear for fields the regex engine *matched* to an
-      OCR block. Missing declarations (field not found) have no image region to highlight.
-      Fix in Phase 5/6 revision: highlight nearest candidate block or show edge annotation.
-- [ ] Tap/hover box to see rule reference + reason (tooltip, mobile-friendly)
+- [x] Missing declarations: nearest unused OCR candidate (dashed) or right-edge annotation
+- [x] Tap/hover box to see rule reference + reason (tooltip, mobile-friendly)
 
 ## Phase 7 — Compliance Report Generation
-- [ ] Generate structured report per scan (all fields + statuses)
-- [ ] Export as PDF
-- [ ] Export as editable format (DOCX)
-- [ ] Attach original photo(s) as evidence
+- [x] Generate structured report per scan (all fields + statuses)
+- [x] Export as PDF
+- [x] Export as editable format (DOCX)
+- [x] Attach original photo(s) as evidence
 
 ## Phase 8 — Repository, Search & Inspection History
-- [ ] Persist scans (product, seller, timestamp, result) to DB
-- [ ] Search/filter past scans by product, seller, date, status
-- [ ] View full inspection history for a given product/seller
+- [x] Persist scans (product, seller, timestamp, result) to DB
+- [x] Search/filter past scans by product, seller, date, status
+- [x] View full inspection history for a given product/seller
 
 ## Phase 9 — Auth & Role-Based Access
 - [ ] Login system (officer vs admin roles)
@@ -84,7 +82,7 @@ Status legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Phase 10 — Dashboard
 - [~] Officer dashboard UI built (scans today, open cases, risk queue) — mock data only
-- [ ] Wire to real scan history (Phase 8 dependency)
+- [x] Wire to real scan history (Phase 8 dependency)
 - [ ] Violations-over-time view, compliance trend charts
 
 ## Phase 11 — Compliance Graph Lookup (Seller Trust Score)
