@@ -11,6 +11,18 @@ Format:
 [Add your entry below this line]
 ------------------------------------------
 
+[2026-09-02] [Antigravity] — Feature: Rule-Based Compliance Engine & Legal Matrix Lookup
+- What I did: Implemented statutory PCR 2011 rule evaluation, Legal Metrology Act citations, penalty clauses, and compliance summary calculations.
+- What's working now: `/scan` and `/compliance/check` evaluate structured fields against Rules 6(1)(a)-(f) & Rule 6(10), producing per-field verdicts (`COMPLIANT`, `NON_COMPLIANT`, `NEEDS_REVIEW`) and scan-level summaries.
+- What's next: Frontend UI (Scan Product / Compliance Result screens) or Risk Scoring.
+
+
+[2026-09-02] [Antigravity] — Feature: Field Structuring
+- What I did: Completed Spec, Backend implementation, and Code Audit for Field Structuring feature.
+- What's working now: `/scan` extracts raw OCR blocks and maps them to 6 structured fields (`manufacturer`, `net_quantity`, `mrp`, `country_of_origin`, `manufacture_date`, `consumer_care`) with source block indexing, bounding boxes, and combined confidence scoring.
+- What's next: Compliance matrix lookup, Rule checking engine, and Frontend screens.
+
+
 [2026-09-01] [Girish] — Phase 1 and 2
 - What to do: Install dependencies from Requirements.txt
 - What I did: Created Frontend and Backend folders

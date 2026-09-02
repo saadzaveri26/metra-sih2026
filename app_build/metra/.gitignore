@@ -39,9 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-#Virtual ENVs
-venv/
-.venv/
-env1/
-.env1/
