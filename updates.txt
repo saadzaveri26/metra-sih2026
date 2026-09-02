@@ -1,0 +1,31 @@
+METRA — TEAM UPDATE LOG
+========================
+Log every change here, newest entry on top. Keep entries short: what you did,
+what's now working, what's next / blocked on.
+
+Format:
+[DATE] [NAME] — [PHASE #]
+- What I did:
+
+------------------------------------------
+[Add your entry below this line]
+------------------------------------------
+
+[2026-09-01] [Girish] — Phase 1 and 2
+- What to do: Install dependencies from Requirements.txt
+- What I did: Created Frontend and Backend folders
+              Added Requirements.txt
+              Edited frontend/app/page.tsx
+              Connected frontend and backend
+              Failed to test OCR with backend/sample_label.png, test_ocr.py is running but main.py se connect nahi ho raha hai
+              
+------------------------------------------
+
+[2026-09-01] [Saad] — Setup
+- What I did: Created repo skeleton (.agents, app_build, stitch_metra_compliance_enforcement_app),
+  generated UI screen references via Stitch, added METRA design system (DESIGN.md).
+- What's working now: UI reference screens for dashboard, scan results, risk queue,
+  seller track record, legal reference assistant.
+- What's next / blocked on: Waiting on app_build/ to have actual Next.js + FastAPI code.
+
+------------------------------------------
