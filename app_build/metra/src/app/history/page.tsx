@@ -176,9 +176,19 @@ export default function HistoryPage() {
 
       {entity && (
         <section className="rounded-xl border border-outline-variant bg-surface-container-low p-4">
-          <p className="label-caps text-on-surface-variant">
-            History for {entity.entity_type}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="label-caps text-on-surface-variant">
+              History for {entity.entity_type}
+            </p>
+            {entity.entity_type === "seller" && (
+              <Link
+                href={`/sellers/${encodeURIComponent(entity.entity_name)}`}
+                className="rounded-lg bg-primary-container px-3 py-1 text-xs font-semibold text-on-primary hover:opacity-90"
+              >
+                View Trust Profile & Compliance Graph →
+              </Link>
+            )}
+          </div>
           <h2 className="text-lg font-bold text-on-surface">{entity.entity_name}</h2>
           <p className="mt-1 text-sm text-on-surface-variant">
             {entity.total_scans} scans · {entity.compliant_count} compliant ·{" "}
@@ -214,10 +224,11 @@ export default function HistoryPage() {
               </Link>
               <div className="flex flex-wrap items-center gap-2">
                 <Link
-                  href={`/history?seller=${encodeURIComponent(scan.seller_name)}`}
-                  className="text-xs font-semibold text-on-surface-variant underline"
+                  href={`/sellers/${encodeURIComponent(scan.seller_name)}`}
+                  className="text-xs font-semibold text-primary-container hover:underline"
+                  title="View Seller Trust Profile & Compliance Graph"
                 >
-                  {scan.seller_name}
+                  {scan.seller_name} (Trust Profile)
                 </Link>
                 <Link
                   href={`/history?product=${encodeURIComponent(scan.product_name)}`}

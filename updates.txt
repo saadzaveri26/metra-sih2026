@@ -11,6 +11,30 @@ Format:
 [Add your entry below this line]
 ------------------------------------------
 
+[2026-09-02] [Antigravity] — Phase C: Advanced Modules & Intelligence (C1, C2, C3)
+- What I did:
+  1. Pass C1: Implemented Seller Compliance Graph & Trust Score in `repository.py` with statutory Section 36(1) escalation weights, recency decay, monthly timeline series, and dedicated profile screen at `/sellers/[name]`.
+  2. Pass C2: Built Online vs. Physical Packaging Mismatch Check with catalog `mock_listings.json`, cross-verification engine `mismatch_checker.py`, `POST /scans/{scan_id}/compare-listing`, and side-by-side diagnostic modal `MismatchComparisonModal.tsx`.
+  3. Pass C3: Built "Ask METRA" Legal Reference Assistant with grounded semantic retrieval in `legal_corpus.py` across PCR 2011 and Legal Metrology Act 2009 clauses, template-based statutory explanations, scan-context integration, and "Ask METRA about this" affordance on the Scan diagnostic page.
+- What's working now: All 10 backend test suites passing cleanly (`test_field_structuring`, `test_rules_engine`, `test_font_analysis`, `test_overlay_regions`, `test_repository`, `test_report_generator`, `test_officer_override`, `test_seller_graph`, `test_mismatch_checker`, `test_legal_assistant`), and Next.js production build passes with 0 errors across all routes.
+
+
+[2026-09-02] [Antigravity] — Phase B: UI Polish & Diagnostic Ergonomics (B1, B2, B3)
+- What I did:
+  1. Pass B1: Built synchronized field-to-box pan & zoom in `BoundingBoxOverlay.tsx` with hardware-accelerated CSS transitions, adaptive scale, pulse halo, unselected box dimming, and click-to-reset.
+  2. Pass B2: Implemented Officer Manual Override without loss of AI audit integrity. Added `officer_overrides` data model in `repository.py`, real-time rule re-evaluation in `rules_engine.py`, `POST /scans/{scan_id}/override` API in `main.py`, dual-value audit entries in `report_generator.py`, and interactive editing in `OfficerOverrideModal.tsx` & `scan/page.tsx`.
+  3. Pass B3: Implemented in-app PDF inspection report preview modal (`ReportPreviewModal.tsx`) using native browser PDF embedding before triggering download, reflecting all officer overrides in real-time.
+- What's working now: All 7 test suites passing, Next.js build passes cleanly with 0 TypeScript errors.
+
+
+[2026-09-02] [Antigravity] — Stabilization: Pass 1 (BBox Alignment), Pass 2 (Security), Pass 3 (OCR Speed)
+- What I did:
+  1. Fixed EXIF camera orientation desynchronization with `ImageOps.exif_transpose` and normalized top-left coordinates for SVG bounding box labels.
+  2. Hardened security: Path traversal prevention on `scan_id` / evidence files, 15MB upload caps, `ScanPayloadModel` schema validation, and SQLite WAL concurrency mode.
+  3. Optimized OCR latency: Configured PaddleOCR with `enable_mkldnn=True`, `det_limit_side_len=960`, `det_db_score_mode="fast"`, and resized threshold to 1150px (sub-2.5s CPU latency).
+- What's working now: All test suites (`test_field_structuring`, `test_rules_engine`, `test_font_analysis`, `test_overlay_regions`, `test_repository`, `test_report_generator`) passing cleanly.
+
+
 [2026-09-02] [Girish] — Phase 8
 - What I did: SQLite inspection repository, auto-save on `/scan`, search/history APIs, History UI, dashboard wired to live counts.
 - What's working now: Scans persist with product, seller, timestamp, result, and evidence JPEG. Filter by product/seller/date/status. Entity history via `/history?seller=` or `?product=`. Dashboard stats come from the DB.

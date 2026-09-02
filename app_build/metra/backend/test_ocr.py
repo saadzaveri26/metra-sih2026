@@ -1,6 +1,12 @@
 from paddleocr import PaddleOCR
 
-ocr = PaddleOCR(use_textline_orientation=True, lang='en', enable_mkldnn=False)
+ocr = PaddleOCR(
+    use_angle_cls=False,
+    lang="en",
+    enable_mkldnn=True,
+    det_limit_side_len=960,
+    det_db_score_mode="fast",
+)
 
 result = ocr.predict('sample_label1.jpg')
 

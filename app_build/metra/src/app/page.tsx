@@ -34,9 +34,18 @@ function formatWhen(iso: string) {
   });
 }
 
+// F2 fix: Time-aware greeting
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [greeting] = useState(getGreeting);
 
   useEffect(() => {
     fetchDashboardSummary()
@@ -62,7 +71,7 @@ export default function DashboardPage() {
       <section className="relative overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low p-4">
         <div className="relative z-10 max-w-[62%]">
           <h1 className="text-2xl font-bold leading-tight text-on-surface">
-            Good morning, Officer.
+            {greeting}, Officer.
           </h1>
           <p className="mt-1 text-sm text-on-surface-variant">
             System ready for field diagnostics and compliance reporting.

@@ -130,20 +130,29 @@ def build_pdf(
         story.append(Spacer(1, 8))
 
     story.append(Paragraph("Declaration checklist", styles["Heading3"]))
-    rows = [["Field", "Status", "Extracted value", "Rule", "Findings"]]
+    rows = [["Field", "Status", "AI / Officer Value", "Rule", "Findings"]]
     for field in FIELD_ORDER:
         r = results.get(field) or {}
         val = (structured.get(field) or {}).get("value") or "—"
+        override = r.get("officer_override") or (structured.get(field) or {}).get("officer_override")
+        if override and override.get("value"):
+            val_cell = Paragraph(
+                f"<b>AI:</b> {val}<br/><b>Officer Override:</b> {override.get('value')} "
+                f"<font color='#004d40'><b>[Authoritative]</b></font>",
+                small,
+            )
+        else:
+            val_cell = Paragraph(str(val), body)
         rows.append(
             [
                 Paragraph(FIELD_LABELS[field], body),
                 Paragraph(str(r.get("status") or "—"), body),
-                Paragraph(str(val), body),
+                val_cell,
                 Paragraph(str(r.get("rule_reference") or "—"), body),
                 Paragraph(str(r.get("findings") or "—"), small),
             ]
         )
-    table = Table(rows, colWidths=[32 * mm, 28 * mm, 32 * mm, 24 * mm, 54 * mm])
+    table = Table(rows, colWidths=[32 * mm, 28 * mm, 36 * mm, 22 * mm, 52 * mm])
     table.setStyle(
         TableStyle(
             [
@@ -178,14 +187,14 @@ def build_pdf(
         font_rows.append(
             [
                 Paragraph(FIELD_LABELS[field], body),
-                Paragraph(str(fr.get("status") or "NOT_MEASURED"), body),
-                Paragraph("—" if hmm is None else f"{hmm:.2f}", body),
-                Paragraph("—" if req is None else f"{req:.1f}", body),
+                Paragraph(str(fr.get("status") or "—"), body),
+                Paragraph(f"{hmm:.2f}" if isinstance(hmm, (int, float)) else "—", body),
+                Paragraph(f"{req:.2f}" if isinstance(req, (int, float)) else "—", body),
                 Paragraph(str(fr.get("findings") or "—"), small),
             ]
         )
-    ft = Table(font_rows, colWidths=[32 * mm, 28 * mm, 28 * mm, 28 * mm, 54 * mm])
-    ft.setStyle(
+    font_table = Table(font_rows, colWidths=[32 * mm, 28 * mm, 26 * mm, 26 * mm, 58 * mm])
+    font_table.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0b2545")),
@@ -201,13 +210,15 @@ def build_pdf(
             ]
         )
     )
-    story.append(ft)
-    story.append(Spacer(1, 10))
+    story.append(font_table)
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph("Statutory Legal Metrology references", styles["Heading3"]))
     story.append(
         Paragraph(
-            "This report is decision-support for Legal Metrology officers. "
-            "Font measurements use bounding-box pixel height and EXIF or assumed DPI; "
-            "physical verification on the package remains required before enforcement.",
+            "Legal Metrology Act, 2009 (Section 36(1) penalty: ₹25,000 first offence; ₹50,000 second offence; "
+            "up to ₹1,00,000 and/or imprisonment up to one year for subsequent offences). "
+            "Packaged Commodities Rules, 2011 (Rules 6, 7, 8, 9, 11, 12, 24).",
             small,
         )
     )
@@ -256,15 +267,19 @@ def build_docx(
     table = doc.add_table(rows=1, cols=5)
     table.style = "Table Grid"
     hdr = table.rows[0].cells
-    for i, label in enumerate(["Field", "Status", "Extracted value", "Rule", "Findings"]):
+    for i, label in enumerate(["Field", "Status", "AI / Officer Value", "Rule", "Findings"]):
         hdr[i].text = label
     for field in FIELD_ORDER:
         r = results.get(field) or {}
         val = (structured.get(field) or {}).get("value") or "—"
+        override = r.get("officer_override") or (structured.get(field) or {}).get("officer_override")
         row = table.add_row().cells
         row[0].text = FIELD_LABELS[field]
         row[1].text = str(r.get("status") or "—")
-        row[2].text = str(val)
+        if override and override.get("value"):
+            row[2].text = f"AI: {val}\nOfficer Override: {override.get('value')} [Authoritative]"
+        else:
+            row[2].text = str(val)
         row[3].text = str(r.get("rule_reference") or "—")
         row[4].text = str(r.get("findings") or "—")
 

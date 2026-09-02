@@ -17,6 +17,7 @@ import StatusChip, { statusBorderColor } from "@/components/StatusChip";
 import BoundingBoxOverlay, { type OverlayBox } from "@/components/BoundingBoxOverlay";
 import DeclarationsPanel from "@/components/DeclarationsPanel";
 import FontAnalysisPanel from "@/components/FontAnalysisPanel";
+import MismatchComparisonModal from "@/components/MismatchComparisonModal";
 import { ArrowLeftIcon, ChevronDownIcon } from "@/components/icons";
 
 export default function HistoryDetailPage() {
@@ -25,6 +26,7 @@ export default function HistoryDetailPage() {
   const [record, setRecord] = useState<StoredScan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<ReportFormat | null>(null);
+  const [compareModalOpen, setCompareModalOpen] = useState(false);
 
   useEffect(() => {
     fetchScan(id)
@@ -171,12 +173,19 @@ export default function HistoryDetailPage() {
         </p>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          onClick={() => setCompareModalOpen(true)}
+          className="flex-1 rounded-lg bg-primary-container px-4 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90"
+        >
+          Compare vs. Marketplace Listing →
+        </button>
         <button
           type="button"
           disabled={!imageUrl || exporting !== null}
           onClick={() => handleExport("pdf")}
-          className="flex-1 rounded-lg bg-primary-container px-4 py-2.5 text-sm font-semibold text-on-primary disabled:opacity-60"
+          className="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container disabled:opacity-60"
         >
           {exporting === "pdf" ? "Exporting…" : "Export PDF"}
         </button>
@@ -184,11 +193,18 @@ export default function HistoryDetailPage() {
           type="button"
           disabled={!imageUrl || exporting !== null}
           onClick={() => handleExport("docx")}
-          className="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-semibold text-on-surface disabled:opacity-60"
+          className="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container disabled:opacity-60"
         >
           {exporting === "docx" ? "Exporting…" : "Export DOCX"}
         </button>
       </div>
+
+      <MismatchComparisonModal
+        isOpen={compareModalOpen}
+        scanId={record.id}
+        productName={record.product_name}
+        onClose={() => setCompareModalOpen(false)}
+      />
     </div>
   );
 }
