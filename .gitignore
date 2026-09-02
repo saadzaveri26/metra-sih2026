@@ -22,3 +22,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Local SQLite history + evidence photos
+app_build/metra/backend/data/

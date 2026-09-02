@@ -1,5 +1,8 @@
 fastapi 
 uvicorn 
 python-multipart
-paddlepaddle 
+paddlepaddle
 paddleocr
+pillow
+reportlab
+python-docx

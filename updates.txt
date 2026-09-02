@@ -11,6 +11,18 @@ Format:
 [Add your entry below this line]
 ------------------------------------------
 
+[2026-09-02] [Girish] — Phase 8
+- What I did: SQLite inspection repository, auto-save on `/scan`, search/history APIs, History UI, dashboard wired to live counts.
+- What's working now: Scans persist with product, seller, timestamp, result, and evidence JPEG. Filter by product/seller/date/status. Entity history via `/history?seller=` or `?product=`. Dashboard stats come from the DB.
+- What's next: Phase 9 auth, or Phase 10 trend charts.
+
+
+[2026-09-02] [Girish] — Phases 3, 4, 5, 6, 7
+- What I did: Rule 7 font-height analysis (separate from missing declarations); missing-field overlays (nearest OCR candidate or edge chip) plus tap tooltips; PDF/DOCX inspection reports with the original label photo.
+- What's working now: `/scan` returns `font_analysis` and `region_overlays`. Scan result UI shows readability panel, tappable overlays, Export PDF / Export DOCX (`/report/pdf`, `/report/docx`). OCR boxes are scaled back to the original image size.
+- What's next: Phase 8 persistence / search history.
+
+
 [2026-09-02] [Antigravity] — Feature: Rule-Based Compliance Engine & Legal Matrix Lookup
 - What I did: Implemented statutory PCR 2011 rule evaluation, Legal Metrology Act citations, penalty clauses, and compliance summary calculations.
 - What's working now: `/scan` and `/compliance/check` evaluate structured fields against Rules 6(1)(a)-(f) & Rule 6(10), producing per-field verdicts (`COMPLIANT`, `NON_COMPLIANT`, `NEEDS_REVIEW`) and scan-level summaries.
