@@ -12,21 +12,12 @@ export type OcrBlock = {
   bounding_box: number[][];
 };
 
-export type OfficerOverride = {
-  value: string;
-  original_ai_value?: string | null;
-  updated_at: string;
-  reason?: string;
-  is_authoritative: boolean;
-};
-
 export type StructuredField = {
   value: string | null;
   confidence: number | null;
   raw_match: string | null;
   source_block_index: number | null;
   bounding_box: number[][] | null;
-  officer_override?: OfficerOverride | null;
 };
 
 export type StructuredFields = Record<string, StructuredField>;
@@ -46,10 +37,6 @@ export type ComplianceResult = {
   penalty_clause: string;
   source_block_index: number | null;
   bounding_box: number[][] | null;
-  ai_value?: string | null;
-  effective_value?: string | null;
-  is_overridden?: boolean;
-  officer_override?: OfficerOverride | null;
 };
 
 export type ComplianceResults = Record<string, ComplianceResult>;
@@ -95,14 +82,29 @@ export type FontAnalysis = {
   fields: Record<string, FontFieldResult>;
 };
 
+export type HealthFlag = {
+  code: string;
+  label: string;
+};
+
+export type HealthGuide = {
+  ingredients_text: string | null;
+  ingredients_list: string[] | null;
+  allergens: string[];
+  health_flags: HealthFlag[];
+  veg_status: "Vegetarian" | "Non-Vegetarian" | null;
+  nutrition_facts: Record<string, number>;
+  disclaimer: string;
+};
+
 export type ScanResponse = {
   blocks: OcrBlock[];
   structured_fields: StructuredFields;
   compliance_summary: ComplianceSummary;
   compliance_results: ComplianceResults;
-  officer_overrides?: Record<string, OfficerOverride>;
   font_analysis?: FontAnalysis;
   region_overlays?: RegionOverlay[];
+  health_guide?: HealthGuide;
   image_width?: number;
   image_height?: number;
   id?: string | null;
@@ -213,11 +215,11 @@ export async function scanImage(
 
 export type ReportFormat = "pdf" | "docx";
 
-export async function generateReportBlob(
+export async function downloadInspectionReport(
   file: File,
   scan: ScanResponse,
   format: ReportFormat
-): Promise<Blob> {
+): Promise<void> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("payload", JSON.stringify(scan));
@@ -230,29 +232,72 @@ export async function generateReportBlob(
     });
   } catch {
     throw new ApiError(
-      `Could not reach the backend at ${API_BASE_URL} to generate the report.`
+      `Could not reach the backend at ${API_BASE_URL} to export the report.`
     );
   }
 
   if (!res.ok) throw await parseError(res);
-  return res.blob();
-}
 
-export async function downloadInspectionReport(
-  file: File,
-  scan: ScanResponse,
-  format: ReportFormat
-): Promise<void> {
-  const blob = await generateReportBlob(file, scan, format);
+  const blob = await res.blob();
   const ext = format === "pdf" ? "pdf" : "docx";
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `metra-inspection-report-${scan.id ?? "scan"}.${ext}`;
+  a.download = `metra-inspection-report.${ext}`;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Builds a mailto: link pre-filled with a compliance summary for the scanned
+ * product. Browsers cannot attach files to a mailto link programmatically —
+ * the caller is expected to also trigger a PDF/DOCX download and tell the
+ * user to attach it manually in the email client that opens.
+ */
+export function buildCompanyMailtoLink(
+  companyEmail: string,
+  scan: ScanResponse
+): string {
+  const product = scan.product_name || "Unnamed product";
+  const seller = scan.seller_name ? ` (Seller: ${scan.seller_name})` : "";
+  const score = Math.round(
+    (scan.compliance_summary.compliant_count /
+      Math.max(scan.compliance_summary.total_fields_checked, 1)) *
+      100
+  );
+  const scannedAt = scan.created_at
+    ? new Date(scan.created_at).toLocaleString()
+    : new Date().toLocaleString();
+
+  const subject = `METRA Compliance Report — ${product}`;
+
+  const violationLines = Object.entries(scan.compliance_results)
+    .filter(([, r]) => r.status !== "COMPLIANT")
+    .map(([field, r]) => `  • ${field.replace(/_/g, " ")}: ${r.findings}`)
+    .join("\n");
+
+  const bodyLines = [
+    `Product: ${product}${seller}`,
+    `Scanned on: ${scannedAt}`,
+    `Overall status: ${scan.compliance_summary.overall_status.replace("_", " ")}`,
+    `Compliance score: ${score}/100`,
+    "",
+    violationLines
+      ? `Issues found:\n${violationLines}`
+      : "No violations found on this scan.",
+    "",
+    "The full inspection report (PDF) has been downloaded to this device — please attach it before sending.",
+    "",
+    "— Sent via METRA (Metrology Enforcement & Traceability Regulatory Assistant)",
+  ];
+
+  const body = bodyLines.join("\n");
+
+  return `mailto:${encodeURIComponent(companyEmail)}?subject=${encodeURIComponent(
+    subject
+  )}&body=${encodeURIComponent(body)}`;
 }
 
 export async function fetchScanList(params: {
@@ -310,213 +355,3 @@ export async function checkHealth(): Promise<boolean> {
     return false;
   }
 }
-
-export async function overrideScanField(
-  scanId: string,
-  field: string,
-  value: string,
-  reason: string = ""
-): Promise<StoredScan> {
-  const res = await apiFetch(
-    `${API_BASE_URL}/scans/${encodeURIComponent(scanId)}/override`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ field, value, reason }),
-    }
-  );
-  if (!res.ok) throw await parseError(res);
-  return res.json();
-}
-
-export async function checkComplianceWithOverrides(
-  structuredFields: StructuredFields,
-  isImported: boolean = false,
-  officerOverrides?: Record<string, OfficerOverride>
-): Promise<{
-  compliance_summary: ComplianceSummary;
-  compliance_results: ComplianceResults;
-}> {
-  const res = await apiFetch(`${API_BASE_URL}/compliance/check`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      structured_fields: structuredFields,
-      is_imported: isImported,
-      officer_overrides: officerOverrides,
-    }),
-  });
-  if (!res.ok) throw await parseError(res);
-  return res.json();
-}
-
-export type SellerComplianceHistory = {
-  seller_name: string;
-  trust_score: number;
-  risk_level: "LOW_RISK" | "MODERATE_RISK" | "HIGH_RISK";
-  risk_label: string;
-  total_scans: number;
-  compliant_count: number;
-  review_count: number;
-  violations_count: number;
-  repeat_violation_count: number;
-  repeat_clauses: Array<{ rule_reference: string; times_violated: number }>;
-  score_breakdown: {
-    base_score: number;
-    base_violation_deductions: number;
-    repeat_violation_surcharge: number;
-    review_deductions: number;
-    compliant_credits: number;
-  };
-  monthly_trend: Array<{
-    month: string;
-    total_scans: number;
-    violations: number;
-    compliant: number;
-    review: number;
-  }>;
-  chronological_violations: Array<{
-    scan_id: string;
-    date: string;
-    product_name: string;
-    field: string;
-    rule_reference: string;
-    rule_description: string;
-    findings: string;
-    penalty_clause: string;
-    is_repeat: boolean;
-    repeat_count: number;
-  }>;
-};
-
-export async function fetchSellerCompliance(sellerName: string): Promise<SellerComplianceHistory> {
-  const res = await apiFetch(`${API_BASE_URL}/sellers/${encodeURIComponent(sellerName)}/history`);
-  if (!res.ok) throw await parseError(res);
-  return res.json();
-}
-
-export type RiskQueueSeller = {
-  seller_name: string;
-  total_scans: number;
-  violations: number;
-  reviews: number;
-  compliant: number;
-  last_scan: string;
-  risk_score: number;
-  risk_level: "critical" | "elevated" | "routine";
-};
-
-export async function fetchRiskQueue(): Promise<RiskQueueSeller[]> {
-  const res = await apiFetch(`${API_BASE_URL}/sellers/risk-queue`);
-  if (!res.ok) throw await parseError(res);
-  return res.json();
-}
-
-export type MockListing = {
-  id: string;
-  product_name: string;
-  aliases: string[];
-  barcode: string;
-  platform: string;
-  listing_url: string;
-  seller_name: string;
-  image_url?: string;
-  declarations: Record<string, string>;
-  mismatch_notes?: string;
-};
-
-export type FieldComparison = {
-  field: string;
-  status: "MATCH" | "MISMATCH" | "MISSING_PHYSICAL" | "MISSING_ONLINE";
-  physical_value: string | null;
-  online_value: string | null;
-  rule_reference: string;
-  details: string;
-};
-
-export type MismatchComparisonResult = {
-  scan_id: string;
-  product_name: string;
-  online_listing: MockListing;
-  comparison: {
-    overall_status: "COMPLIANT" | "MISMATCH_DETECTED";
-    is_concordant: boolean;
-    match_count: number;
-    mismatch_count: number;
-    total_fields: number;
-    fields: Record<string, FieldComparison>;
-  };
-};
-
-export async function fetchMockListings(): Promise<MockListing[]> {
-  const res = await apiFetch(`${API_BASE_URL}/mock-listings`);
-  if (!res.ok) throw await parseError(res);
-  return res.json();
-}
-
-export async function compareScanListing(
-  scanId: string,
-  params?: { product_name?: string; barcode?: string; listing_id?: string }
-): Promise<MismatchComparisonResult> {
-  const res = await apiFetch(
-    `${API_BASE_URL}/scans/${encodeURIComponent(scanId)}/compare-listing`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params || {}),
-    }
-  );
-  if (!res.ok) throw await parseError(res);
-  return res.json();
-}
-
-export type AssistantSections = {
-  legal_reference?: string;
-  act_section?: string;
-  statutory_requirement?: string;
-  officer_guidance?: string;
-  penal_sanction?: string;
-  source?: string;
-  source_authority?: string;
-  inspection_finding?: {
-    product: string;
-    status: string;
-    findings: string;
-    rule_reference: string;
-  };
-};
-
-export type AssistantResponse = {
-  question: string;
-  answer: string;
-  sections?: AssistantSections;
-  primary_clause: {
-    id: string;
-    clause_ref: string;
-    title: string;
-    act_section: string;
-  };
-  matched_clauses: Array<{
-    id: string;
-    clause_ref: string;
-    title: string;
-    relevance_score: number;
-  }>;
-};
-
-export async function askAssistant(
-  question: string,
-  scanId?: string
-): Promise<AssistantResponse> {
-  const res = await apiFetch(`${API_BASE_URL}/assistant/ask`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, scan_id: scanId }),
-  });
-  if (!res.ok) throw await parseError(res);
-  return res.json();
-}
-
-
-
-

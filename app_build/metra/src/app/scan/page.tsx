@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import {
   scanImage,
   downloadInspectionReport,
-  overrideScanField,
-  checkComplianceWithOverrides,
+  buildCompanyMailtoLink,
   ApiError,
   type ScanResponse,
   type ReportFormat,
@@ -16,13 +14,11 @@ import StatusChip, { statusBorderColor } from "@/components/StatusChip";
 import BoundingBoxOverlay, {
   type OverlayBox,
 } from "@/components/BoundingBoxOverlay";
-import { CameraIcon, UploadIcon, ChevronDownIcon, EditIcon } from "@/components/icons";
+import { CameraIcon, UploadIcon, ChevronDownIcon, MailIcon } from "@/components/icons";
 import Avatar, { type AvatarState } from "@/components/Avatar";
 import DeclarationsPanel from "@/components/DeclarationsPanel";
 import FontAnalysisPanel from "@/components/FontAnalysisPanel";
-import OfficerOverrideModal from "@/components/OfficerOverrideModal";
-import ReportPreviewModal from "@/components/ReportPreviewModal";
-import MismatchComparisonModal from "@/components/MismatchComparisonModal";
+import HealthGuidePanel from "@/components/HealthGuidePanel";
 
 type ViewState = "idle" | "loading" | "error" | "result";
 
@@ -58,8 +54,6 @@ export default function ScanPage() {
   const loadingStep = useLoadingStep(state === "loading");
 
   function handleFileSelect(f: File) {
-    // F1 fix: Revoke previous blob URL to prevent memory leak
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
     setFile(f);
     setImageUrl(URL.createObjectURL(f));
     setResult(null);
@@ -86,8 +80,6 @@ export default function ScanPage() {
   }
 
   function handleReset() {
-    // F1 fix: Revoke blob URL to prevent memory leak
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
     setFile(null);
     setImageUrl(null);
     setResult(null);
@@ -363,75 +355,17 @@ function ComplianceResultView({
   file: File | null;
   onRescan: () => void;
 }) {
-  const [scan, setScan] = useState<ScanResponse>(result);
+  const { compliance_summary, compliance_results, structured_fields, blocks } = result;
   const [activeField, setActiveField] = useState<string | null>(null);
-  const [overrideModalField, setOverrideModalField] = useState<string | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [compareModalOpen, setCompareModalOpen] = useState(false);
   const [exporting, setExporting] = useState<ReportFormat | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
-
-  // Synchronize internal state if parent result prop changes
-  useEffect(() => {
-    setScan(result);
-  }, [result]);
-
-  const { compliance_summary, compliance_results, structured_fields, blocks } = scan;
-
-  async function handleApplyOverride(field: string, value: string, reason: string) {
-    if (scan.id) {
-      const updated = await overrideScanField(scan.id, field, value, reason);
-      if (updated && updated.payload) {
-        setScan(updated.payload);
-      }
-    } else {
-      const newOverrides = {
-        ...(scan.officer_overrides ?? {}),
-        [field]: {
-          value,
-          original_ai_value: scan.structured_fields[field]?.value ?? null,
-          updated_at: new Date().toISOString(),
-          reason,
-          is_authoritative: true,
-        },
-      };
-      const structured = { ...scan.structured_fields };
-      if (structured[field]) {
-        structured[field] = {
-          ...structured[field],
-          officer_override: newOverrides[field],
-        };
-      } else {
-        structured[field] = {
-          value: null,
-          confidence: 1.0,
-          raw_match: null,
-          source_block_index: null,
-          bounding_box: null,
-          officer_override: newOverrides[field],
-        };
-      }
-      const checked = await checkComplianceWithOverrides(
-        structured,
-        scan.is_imported ?? false,
-        newOverrides
-      );
-      setScan({
-        ...scan,
-        structured_fields: structured,
-        officer_overrides: newOverrides,
-        compliance_summary: checked.compliance_summary,
-        compliance_results: checked.compliance_results,
-      });
-    }
-  }
 
   async function handleExport(format: ReportFormat) {
     if (!file) return;
     setExporting(format);
     setExportError(null);
     try {
-      await downloadInspectionReport(file, scan, format);
+      await downloadInspectionReport(file, result, format);
     } catch (err) {
       setExportError(
         err instanceof ApiError ? err.message : "Could not export the inspection report."
@@ -440,7 +374,6 @@ function ComplianceResultView({
       setExporting(null);
     }
   }
-
   const score = Math.round(
     (compliance_summary.compliant_count / Math.max(compliance_summary.total_fields_checked, 1)) *
       100
@@ -459,15 +392,7 @@ function ComplianceResultView({
     NON_COMPLIANT: "Violation Detected",
   };
 
-  // Keep overlay boxes' status in sync with any overrides
-  const effectiveBoxes = useMemo(() => {
-    return overlayBoxes.map((b) => {
-      const fieldRes = compliance_results[b.field];
-      return fieldRes ? { ...b, status: fieldRes.status } : b;
-    });
-  }, [overlayBoxes, compliance_results]);
-
-  const hasOverlays = effectiveBoxes.length > 0;
+  const hasOverlays = overlayBoxes.length > 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -479,22 +404,11 @@ function ComplianceResultView({
           <p className="text-lg font-bold text-on-surface">
             {verdictCopy[compliance_summary.overall_status]}
           </p>
-          {(scan.id || scan.product_name) && (
+          {(result.id || result.product_name) && (
             <p className="text-xs text-on-surface-variant">
-              {scan.id ? `Saved ${scan.id}` : "Not saved"}
-              {scan.product_name ? ` · ${scan.product_name}` : ""}
-              {scan.seller_name && (
-                <>
-                  {" · "}
-                  <Link
-                    href={`/sellers/${encodeURIComponent(scan.seller_name)}`}
-                    className="font-semibold text-primary-container hover:underline"
-                    title="View Seller Compliance Graph & Trust Score"
-                  >
-                    {scan.seller_name} (Trust Profile)
-                  </Link>
-                </>
-              )}
+              {result.id ? `Saved ${result.id}` : "Not saved"}
+              {result.product_name ? ` · ${result.product_name}` : ""}
+              {result.seller_name ? ` · ${result.seller_name}` : ""}
             </p>
           )}
           <p className="text-sm text-on-surface-variant">
@@ -515,7 +429,7 @@ function ComplianceResultView({
         </div>
         <BoundingBoxOverlay
           imageUrl={imageUrl}
-          boxes={effectiveBoxes}
+          boxes={overlayBoxes}
           activeField={activeField}
           onSelectField={setActiveField}
         />
@@ -554,17 +468,15 @@ function ComplianceResultView({
         )}
       </section>
 
-      {/* ── Extracted Declarations with Manual Override Affordance ── */}
-      <DeclarationsPanel
-        structuredFields={structured_fields}
-        activeField={activeField}
-        onSelectField={setActiveField}
-        onEditField={(f) => setOverrideModalField(f)}
-      />
+      {/* ── Phase 3: Extracted Declarations ── */}
+      <DeclarationsPanel structuredFields={structured_fields} />
 
-      {scan.font_analysis && (
-        <FontAnalysisPanel analysis={scan.font_analysis} />
+      {result.font_analysis && (
+        <FontAnalysisPanel analysis={result.font_analysis} />
       )}
+
+      {/* Consumer Health Guide */}
+      <HealthGuidePanel guide={result.health_guide} />
 
       {/* Score */}
       <section className="flex items-center justify-between rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
@@ -576,31 +488,6 @@ function ComplianceResultView({
           <span className="text-4xl font-bold text-on-surface">{score}</span>
           <span className="ml-1 text-sm text-on-surface-variant">/100</span>
         </div>
-      </section>
-
-      {/* Signature Demo Feature: Online vs. Physical Mismatch Cross-Verification */}
-      <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-primary-container/40 bg-primary-container/10 p-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-primary-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-on-primary">
-              Signature Feature
-            </span>
-            <h3 className="text-sm font-bold text-on-surface">
-              Online Marketplace vs. Physical Packaging Cross-Verification
-            </h3>
-          </div>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            Cross-check physical package declarations against e-commerce listings for price inflation, quantity short-delivery, and origin discrepancies under Rule 6(10).
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setCompareModalOpen(true)}
-          disabled={!scan.id}
-          className="rounded-lg bg-primary-container px-4 py-2.5 text-xs font-semibold text-on-primary hover:opacity-90 disabled:opacity-50 shrink-0"
-        >
-          {scan.id ? "Compare vs. Marketplace →" : "Save Scan to Compare"}
-        </button>
       </section>
 
       {/* Rule checklist */}
@@ -615,11 +502,9 @@ function ComplianceResultView({
               field={field}
               result={compliance_results[field]}
               highlighted={activeField === field}
-              scanId={scan.id}
               onHighlight={() =>
                 setActiveField((cur) => (cur === field ? null : field))
               }
-              onEdit={() => setOverrideModalField(field)}
             />
           ))}
         </ul>
@@ -635,23 +520,15 @@ function ComplianceResultView({
         <button
           type="button"
           onClick={onRescan}
-          className="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container"
+          className="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-semibold text-on-surface"
         >
           Scan Another
         </button>
         <button
           type="button"
-          disabled={!file}
-          onClick={() => setPreviewOpen(true)}
-          className="flex-1 rounded-lg bg-primary-container px-4 py-2.5 text-sm font-semibold text-on-primary hover:opacity-90 disabled:opacity-60"
-        >
-          Preview Report
-        </button>
-        <button
-          type="button"
           disabled={!file || exporting !== null}
           onClick={() => handleExport("pdf")}
-          className="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container disabled:opacity-60"
+          className="flex-1 rounded-lg bg-primary-container px-4 py-2.5 text-sm font-semibold text-on-primary disabled:opacity-60"
         >
           {exporting === "pdf" ? "Exporting PDF…" : "Export PDF"}
         </button>
@@ -659,48 +536,104 @@ function ComplianceResultView({
           type="button"
           disabled={!file || exporting !== null}
           onClick={() => handleExport("docx")}
-          className="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container disabled:opacity-60"
+          className="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-semibold text-on-surface disabled:opacity-60"
         >
           {exporting === "docx" ? "Exporting DOCX…" : "Export DOCX"}
         </button>
       </div>
 
-      {/* In-App Report Preview Modal */}
-      <ReportPreviewModal
-        isOpen={previewOpen}
-        file={file}
-        scan={scan}
-        onClose={() => setPreviewOpen(false)}
-      />
-
-      {/* Online vs. Physical Mismatch Comparison Modal */}
-      <MismatchComparisonModal
-        isOpen={compareModalOpen}
-        scanId={scan.id || null}
-        productName={scan.product_name}
-        onClose={() => setCompareModalOpen(false)}
-      />
-
-      {/* Officer Manual Override Modal */}
-      <OfficerOverrideModal
-        isOpen={overrideModalField !== null}
-        field={overrideModalField}
-        currentAiValue={
-          overrideModalField
-            ? structured_fields[overrideModalField]?.value ?? null
-            : null
-        }
-        currentOverride={
-          overrideModalField
-            ? structured_fields[overrideModalField]?.officer_override ??
-              scan.officer_overrides?.[overrideModalField] ??
-              null
-            : null
-        }
-        onClose={() => setOverrideModalField(null)}
-        onSave={handleApplyOverride}
-      />
+      <MailToCompanySection result={result} file={file} onExport={handleExport} />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Mail to Company — opens the user's own email client, pre-filled with a
+// summary of the scan. Browsers cannot attach files to a mailto link, so
+// this also downloads the PDF report and tells the user to attach it.
+// ---------------------------------------------------------------------------
+function MailToCompanySection({
+  result,
+  file,
+  onExport,
+}: {
+  result: ScanResponse;
+  file: File | null;
+  onExport: (format: ReportFormat) => Promise<void>;
+}) {
+  const [companyEmail, setCompanyEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
+    "idle"
+  );
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(companyEmail.trim());
+
+  async function handleMailToCompany() {
+    if (!emailValid) {
+      setStatus("error");
+      setErrorMsg("Enter a valid company email address.");
+      return;
+    }
+    setStatus("sending");
+    setErrorMsg(null);
+    try {
+      // Download the PDF first so the user has a file ready to attach —
+      // mailto links cannot carry attachments.
+      if (file) {
+        await onExport("pdf");
+      }
+      const mailtoUrl = buildCompanyMailtoLink(companyEmail.trim(), result);
+      window.location.href = mailtoUrl;
+      setStatus("sent");
+    } catch {
+      setStatus("error");
+      setErrorMsg("Could not prepare the report for email. Try exporting PDF manually first.");
+    }
+  }
+
+  return (
+    <section className="flex flex-col gap-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+      <div className="flex items-center gap-2">
+        <MailIcon width={18} height={18} className="text-on-surface-variant" />
+        <h2 className="text-base font-bold text-on-surface">Mail to Company</h2>
+      </div>
+      <p className="text-xs text-on-surface-variant">
+        Opens your email app with the compliance summary pre-filled and downloads
+        the PDF report — attach the downloaded file before sending.
+      </p>
+
+      <input
+        type="email"
+        value={companyEmail}
+        onChange={(e) => {
+          setCompanyEmail(e.target.value);
+          if (status === "error") setStatus("idle");
+        }}
+        placeholder="company@example.com"
+        className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface"
+      />
+
+      {status === "error" && errorMsg && (
+        <p className="rounded-lg bg-violation-container px-3 py-2 text-xs text-violation">
+          {errorMsg}
+        </p>
+      )}
+      {status === "sent" && (
+        <p className="rounded-lg bg-compliant-container px-3 py-2 text-xs text-compliant">
+          Email app opened — remember to attach the PDF that was just downloaded.
+        </p>
+      )}
+
+      <button
+        type="button"
+        disabled={!companyEmail || status === "sending"}
+        onClick={handleMailToCompany}
+        className="rounded-lg bg-primary-container px-4 py-2.5 text-sm font-semibold text-on-primary disabled:opacity-60"
+      >
+        {status === "sending" ? "Preparing…" : "Mail to Company"}
+      </button>
+    </section>
   );
 }
 
@@ -711,22 +644,15 @@ function RuleRow({
   field,
   result,
   highlighted,
-  scanId,
   onHighlight,
-  onEdit,
 }: {
   field: string;
   result: ScanResponse["compliance_results"][string];
   highlighted: boolean;
-  scanId?: string | null;
   onHighlight: () => void;
-  onEdit: () => void;
 }) {
   const [open, setOpen] = useState(result.status !== "COMPLIANT");
-  const showDetail = true;
-
-  const override = result.officer_override;
-  const isOverridden = result.is_overridden || override != null;
+  const showDetail = result.status !== "COMPLIANT";
 
   return (
     <li
@@ -734,108 +660,41 @@ function RuleRow({
         highlighted ? "bg-surface-container" : ""
       }`}
     >
-      <div className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen((o) => !o);
-            onHighlight();
-          }}
-          className="flex-1 min-w-0 text-left cursor-pointer"
-        >
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-bold text-on-surface">
-              {FIELD_LABELS[field] ?? field}
-            </p>
-            {isOverridden && (
-              <span className="rounded bg-primary-container/20 px-1.5 py-0.5 text-[10px] font-bold text-primary-container">
-                Officer Override
-              </span>
-            )}
-          </div>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen((o) => !o);
+          onHighlight();
+        }}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        <div>
+          <p className="text-sm font-bold text-on-surface">
+            {FIELD_LABELS[field] ?? field}
+          </p>
           <p className="text-xs text-on-surface-variant">{result.rule_reference}</p>
-        </button>
-
+        </div>
         <div className="flex items-center gap-2">
           <StatusChip status={result.status} size="sm" />
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            title="Manual officer override"
-            className="rounded p-1.5 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-          >
-            <EditIcon width={14} height={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            className="p-1 text-on-surface-variant"
-          >
+          {showDetail && (
             <ChevronDownIcon
               width={16}
               height={16}
-              className={`transition-transform ${open ? "rotate-180" : ""}`}
+              className={`text-on-surface-variant transition-transform ${open ? "rotate-180" : ""}`}
             />
-          </button>
-        </div>
-      </div>
-
-      {showDetail && open && (
-        <div className="px-4 pb-4 text-sm text-on-surface-variant space-y-2">
-          <p className="font-semibold text-on-surface">{result.rule_description}</p>
-          <p>{result.findings}</p>
-
-          {/* Audit trail comparison */}
-          {isOverridden && (
-            <div className="rounded-lg bg-surface-container p-2.5 text-xs">
-              <p className="font-semibold text-on-surface mb-1">Audit Record</p>
-              <p>
-                <span className="font-medium text-on-surface">Original AI Read: </span>
-                <span className="font-mono text-on-surface-variant">
-                  {result.ai_value ?? "Not detected"}
-                </span>
-              </p>
-              <p>
-                <span className="font-medium text-on-surface">Officer Override: </span>
-                <span className="font-semibold text-compliant">
-                  {result.effective_value ?? override?.value}
-                </span>{" "}
-                <span className="text-[10px] font-bold text-primary-container">
-                  (Authoritative for verdict)
-                </span>
-              </p>
-              {override?.reason && (
-                <p>
-                  <span className="font-medium text-on-surface">Reason: </span>
-                  {override.reason}
-                </p>
-              )}
-            </div>
           )}
-
+        </div>
+      </button>
+      {showDetail && open && (
+        <div className="px-4 pb-4 text-sm text-on-surface-variant">
+          <p className="mb-1 font-semibold text-on-surface">{result.rule_description}</p>
+          <p>{result.findings}</p>
           {result.penalty_clause && (
-            <p className="rounded-lg bg-surface-container-high px-3 py-2 text-xs">
+            <p className="mt-2 rounded-lg bg-surface-container-high px-3 py-2 text-xs">
               <span className="font-semibold">Penalty: </span>
               {result.penalty_clause}
             </p>
           )}
-
-          {/* Ask METRA Legal Reference Affordance */}
-          <div className="pt-1.5 flex items-center justify-between border-t border-outline-variant/60">
-            <Link
-              href={`/assistant?${scanId ? `scan_id=${encodeURIComponent(scanId)}&` : ""}q=${encodeURIComponent(
-                `Why did ${FIELD_LABELS[field] || field} receive ${result.status} status under ${result.rule_reference}? What are the statutory requirements?`
-              )}`}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-container hover:underline"
-              title="Consult METRA Legal Assistant on this rule"
-            >
-              <span>💬</span>
-              <span>Ask METRA about this rule & penalties →</span>
-            </Link>
-          </div>
         </div>
       )}
     </li>
