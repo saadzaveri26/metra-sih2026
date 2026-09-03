@@ -1,4 +1,5 @@
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
+import os
 import json
 from contextlib import asynccontextmanager
 
@@ -7,8 +8,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 import numpy as np
-from paddleocr import PaddleOCR
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from field_structuring import extract_structured_fields
@@ -24,53 +24,55 @@ from repository import (
     init_db,
     persist_scan,
     search_scans,
+    list_sellers_with_risk,
+    update_scan_override,
 )
 from rules_engine import evaluate_compliance
+from legal_corpus import get_assistant_engine
+from mismatch_checker import compare_scan_with_listing, load_mock_listings
+
+
+# ---------------------------------------------------------------------------
+# OCR Engine Setup: winocr (Native Windows 10/11 Media OCR) + PaddleOCR Fallback
+# ---------------------------------------------------------------------------
+_OCR_ENGINE = None
+
+try:
+    import winocr
+    _OCR_ENGINE = "winocr"
+except ImportError:
+    try:
+        from paddleocr import PaddleOCR
+        _OCR_ENGINE = PaddleOCR(
+            use_textline_orientation=True,
+            lang="en",
+            enable_mkldnn=False,
+        )
+    except Exception:
+        _OCR_ENGINE = None
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+    # Preload the assistant search engine to eliminate cold-start delay
+    try:
+        get_assistant_engine()
+    except Exception:
+        pass
     yield
 
 
 app = FastAPI(title="METRA Compliance API", lifespan=lifespan)
 
+cors_origins = os.getenv("METRA_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[origin.strip() for origin in cors_origins if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# ---------------------------------------------------------------------------
-# Load once at startup, not per-request.
-# det_db_score_mode="fast" uses a lighter post-processing step that is
-# measurably faster with negligible accuracy drop on printed labels.
-# ---------------------------------------------------------------------------
-ocr = PaddleOCR(
-    use_textline_orientation=True,
-    lang="en",
-    enable_mkldnn=False,
-)
-
-# Maximum long-side pixel dimension before OCR.
-# Resizing to ≤1600 px cuts inference time 40-60% on high-res phone photos
-# while preserving enough detail for printed label text.
-_OCR_MAX_DIM = 1600
-
-
-def _resize_for_ocr(img: np.ndarray) -> np.ndarray:
-    """Down-scale *img* so its longest side ≤ _OCR_MAX_DIM. Returns img unchanged if already small enough."""
-    h, w = img.shape[:2]
-    longest = max(h, w)
-    if longest <= _OCR_MAX_DIM:
-        return img
-    scale = _OCR_MAX_DIM / longest
-    new_w = max(1, int(round(w * scale)))
-    new_h = max(1, int(round(h * scale)))
-    return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
 
 def _scale_box(box, scale_x: float, scale_y: float):
@@ -78,44 +80,96 @@ def _scale_box(box, scale_x: float, scale_y: float):
     return [[float(p[0]) * scale_x, float(p[1]) * scale_y] for p in pts]
 
 
+def run_ocr(img: np.ndarray) -> List[Dict[str, Any]]:
+    orig_h, orig_w = img.shape[:2]
+    longest = max(orig_h, orig_w)
+    scale = 1.0
+
+    # For fine print on packaging, scale up if resolution is low, or scale down if excessively large
+    if longest < 1400:
+        scale = min(2.0, 1800.0 / longest)
+        new_w = int(round(orig_w * scale))
+        new_h = int(round(orig_h * scale))
+        proc_img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+    elif longest > 2200:
+        scale = 2000.0 / longest
+        new_w = int(round(orig_w * scale))
+        new_h = int(round(orig_h * scale))
+        proc_img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    else:
+        proc_img = img
+
+    blocks = []
+
+    if _OCR_ENGINE == "winocr":
+        import winocr
+        rgb_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
+        result = winocr.recognize_cv2(rgb_img, lang="en")
+        lines = result.get("lines", []) if isinstance(result, dict) else []
+        for line in lines:
+            text = line.get("text", "").strip()
+            if not text:
+                continue
+            box = line.get("bounding_box", [])
+            if not box:
+                continue
+            # Re-scale bounding boxes back to 1x original image dimensions
+            orig_box = [[float(pt[0]) / scale, float(pt[1]) / scale] for pt in box]
+            blocks.append({
+                "text": text,
+                "confidence": 0.95,
+                "bounding_box": orig_box,
+            })
+    elif _OCR_ENGINE is not None:
+        result = _OCR_ENGINE.predict(proc_img)
+        for res in result:
+            texts = res.get("rec_texts", [])
+            scores = res.get("rec_scores", [])
+            boxes = res.get("rec_polys", [])
+            for text, score, box in zip(texts, scores, boxes):
+                orig_box = [[float(pt[0]) / scale, float(pt[1]) / scale] for pt in (box.tolist() if hasattr(box, "tolist") else box)]
+                blocks.append({
+                    "text": text,
+                    "confidence": round(float(score), 3),
+                    "bounding_box": orig_box,
+                })
+
+    return blocks
+
+
 class ComplianceCheckRequest(BaseModel):
     structured_fields: Dict[str, Dict[str, Any]]
     is_imported: bool = False
 
 
-def run_ocr(img: np.ndarray):
-    orig_h, orig_w = img.shape[:2]
-    resized = _resize_for_ocr(img)
-    rh, rw = resized.shape[:2]
-    scale_x = orig_w / rw
-    scale_y = orig_h / rh
-    result = ocr.predict(resized)
-    blocks = []
-    for res in result:
-        texts = res.get("rec_texts", [])
-        scores = res.get("rec_scores", [])
-        boxes = res.get("rec_polys", [])
+class OfficerOverrideRequest(BaseModel):
+    field: str
+    value: str
+    reason: Optional[str] = "Officer manual correction"
 
-        for text, score, box in zip(texts, scores, boxes):
-            blocks.append({
-                "text": text,
-                "confidence": round(float(score), 3),
-                "bounding_box": _scale_box(box, scale_x, scale_y),
-            })
-    return blocks
+
+class AssistantAskRequest(BaseModel):
+    question: str = Field(..., max_length=2000)
+    scan_id: Optional[str] = None
+
+
+class CompareListingRequest(BaseModel):
+    product_name: Optional[str] = None
+    barcode: Optional[str] = None
+    listing_id: Optional[str] = None
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "message": "Backend says hello"}
+    return {"status": "ok", "message": "METRA Legal Metrology API operational", "ocr_engine": _OCR_ENGINE}
 
 
 @app.post("/scan")
 async def scan_image(
     file: UploadFile = File(...),
     is_imported: bool = Query(default=False, description="Flag if packaging is for imported commodity"),
-    product_name: str = Query(default="", description="Officer-entered product name"),
-    seller_name: str = Query(default="", description="Officer-entered seller / establishment name"),
+    product_name: str = Query(default="", max_length=500, description="Officer-entered product name"),
+    seller_name: str = Query(default="", max_length=500, description="Officer-entered seller / establishment name"),
 ):
     contents = await file.read()
     if not contents:
@@ -130,8 +184,6 @@ async def scan_image(
     image_h, image_w = img.shape[:2]
     blocks = await run_in_threadpool(run_ocr, img)
 
-    # Always return blocks even if no declarations were matched —
-    # the frontend uses the raw OCR text as a fallback display.
     structured_fields = extract_structured_fields(blocks)
     compliance = evaluate_compliance(structured_fields, is_imported=is_imported)
     font_analysis = analyze_font_sizes(
@@ -276,6 +328,67 @@ def read_scan_evidence(scan_id: str):
     return FileResponse(path, media_type="image/jpeg", filename=path.name)
 
 
+@app.post("/scans/{scan_id}/override")
+def apply_override(scan_id: str, req: OfficerOverrideRequest):
+    updated = update_scan_override(
+        scan_id=scan_id,
+        field=req.field,
+        value=req.value,
+        reason=req.reason or "Officer manual verification",
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Scan not found or override failed")
+    return updated
+
+
 @app.get("/dashboard/summary")
 def read_dashboard_summary():
     return dashboard_summary()
+
+
+@app.get("/sellers/risk-queue")
+def get_risk_queue():
+    return list_sellers_with_risk()
+
+
+@app.get("/sellers/{seller_name}/history")
+def get_seller_history(seller_name: str):
+    try:
+        return entity_history(seller=seller_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/mock-listings")
+def get_mock_listings():
+    return load_mock_listings()
+
+
+@app.post("/scans/{scan_id}/compare-listing")
+def compare_listing(scan_id: str, req: CompareListingRequest):
+    record = get_scan(scan_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    res = compare_scan_with_listing(
+        scan_record=record,
+        product_name=req.product_name,
+        barcode=req.barcode,
+        listing_id=req.listing_id,
+    )
+    return res
+
+
+@app.post("/assistant/ask")
+async def ask_legal_assistant(req: AssistantAskRequest):
+    engine = get_assistant_engine()
+    scan_ctx = None
+    if req.scan_id:
+        record = get_scan(req.scan_id)
+        if record:
+            payload = record.get("payload") or {}
+            scan_ctx = {
+                "product_name": record.get("product_name"),
+                "compliance_results": payload.get("compliance_results"),
+            }
+    res = await run_in_threadpool(engine.answer_query, req.question, scan_ctx)
+    return res

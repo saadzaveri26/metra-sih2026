@@ -190,3 +190,56 @@ def compare_physical_vs_online(
         "total_fields": len(field_rules),
         "fields": results,
     }
+
+
+def compare_scan_with_listing(
+    scan_record: Dict[str, Any],
+    product_name: Optional[str] = None,
+    barcode: Optional[str] = None,
+    listing_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    payload = scan_record.get("payload")
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except Exception:
+            payload = {}
+    elif not isinstance(payload, dict):
+        payload = {}
+
+    physical_fields = payload.get("structured_fields") or {}
+    listings = load_mock_listings()
+
+    matched_listing = None
+    if listing_id:
+        for item in listings:
+            if item.get("id") == listing_id:
+                matched_listing = item
+                break
+
+    if not matched_listing:
+        p_name = product_name or scan_record.get("product_name") or ""
+        matched_listing = find_mock_listing(
+            product_name=p_name,
+            barcode=barcode or "",
+            listings=listings,
+        )
+
+    if not matched_listing:
+        return {
+            "matched_listing": None,
+            "overall_status": "NO_LISTING_FOUND",
+            "is_concordant": False,
+            "match_count": 0,
+            "mismatch_count": 0,
+            "total_fields": 6,
+            "fields": {},
+            "message": "No matching digital marketplace listing found for cross-verification.",
+        }
+
+    comparison = compare_physical_vs_online(physical_fields, matched_listing)
+    return {
+        "matched_listing": matched_listing,
+        **comparison,
+    }
+
