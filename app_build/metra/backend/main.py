@@ -104,17 +104,26 @@ def run_ocr(img: np.ndarray) -> List[Dict[str, Any]]:
     if _OCR_ENGINE == "winocr":
         import winocr
         rgb_img = cv2.cvtColor(proc_img, cv2.COLOR_BGR2RGB)
-        result = winocr.recognize_cv2(rgb_img, lang="en")
+        result = winocr.recognize_cv2_sync(rgb_img, lang="en")
         lines = result.get("lines", []) if isinstance(result, dict) else []
         for line in lines:
             text = line.get("text", "").strip()
             if not text:
                 continue
-            box = line.get("bounding_box", [])
-            if not box:
+            words = line.get("words", [])
+            if not words:
                 continue
+            min_x = min(w["bounding_rect"]["x"] for w in words if "bounding_rect" in w)
+            min_y = min(w["bounding_rect"]["y"] for w in words if "bounding_rect" in w)
+            max_x = max(w["bounding_rect"]["x"] + w["bounding_rect"]["width"] for w in words if "bounding_rect" in w)
+            max_y = max(w["bounding_rect"]["y"] + w["bounding_rect"]["height"] for w in words if "bounding_rect" in w)
             # Re-scale bounding boxes back to 1x original image dimensions
-            orig_box = [[float(pt[0]) / scale, float(pt[1]) / scale] for pt in box]
+            orig_box = [
+                [float(min_x) / scale, float(min_y) / scale],
+                [float(max_x) / scale, float(min_y) / scale],
+                [float(max_x) / scale, float(max_y) / scale],
+                [float(min_x) / scale, float(max_y) / scale],
+            ]
             blocks.append({
                 "text": text,
                 "confidence": 0.95,
