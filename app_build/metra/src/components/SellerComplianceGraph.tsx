@@ -325,7 +325,7 @@ export default function SellerComplianceGraph({
 
                   <div className="text-right shrink-0">
                     <p className="text-xs font-mono text-on-surface-variant">
-                      {new Date(v.date).toLocaleDateString()}
+                      {v.date || v.created_at ? new Date(v.date || v.created_at || "").toLocaleDateString() : "Recent"}
                     </p>
                     <Link
                       href={`/history/${encodeURIComponent(v.scan_id)}`}

@@ -136,11 +136,11 @@ export default function MismatchComparisonModal({
             </select>
           </div>
 
-          {result && (
+          {result && result.online_listing && (
             <div className="flex items-center gap-3 text-xs">
               <span className="text-on-surface-variant font-medium">Platform:</span>
               <span className="rounded bg-surface-container-high px-2.5 py-0.5 font-bold text-on-surface">
-                {result.online_listing.platform}
+                {result.online_listing.platform || result.online_listing.marketplace}
               </span>
               <span className="text-on-surface-variant font-medium">Seller:</span>
               <span className="font-semibold text-on-surface">
@@ -170,7 +170,7 @@ export default function MismatchComparisonModal({
             </div>
           )}
 
-          {!loading && !error && result && (
+          {!loading && !error && result && result.comparison && (
             <div className="flex flex-col gap-6">
               {/* Verdict Summary Card */}
               <div
@@ -226,7 +226,7 @@ export default function MismatchComparisonModal({
                 </div>
 
                 <div className="divide-y divide-outline-variant">
-                  {Object.entries(result.comparison.fields).map(([fieldKey, item]) => {
+                  {Object.entries(result.comparison.fields || {}).map(([fieldKey, item]) => {
                     const isMismatch = item.status === "MISMATCH" || item.status.startsWith("MISSING");
                     return (
                       <div

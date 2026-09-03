@@ -12,12 +12,21 @@ export type OcrBlock = {
   bounding_box: number[][];
 };
 
+export type OfficerOverride = {
+  value: string;
+  original_ai_value?: string | null;
+  updated_at: string;
+  reason: string;
+  is_authoritative: boolean;
+};
+
 export type StructuredField = {
   value: string | null;
   confidence: number | null;
   raw_match: string | null;
   source_block_index: number | null;
   bounding_box: number[][] | null;
+  officer_override?: OfficerOverride | null;
 };
 
 export type StructuredFields = Record<string, StructuredField>;
@@ -112,6 +121,7 @@ export type ScanResponse = {
   product_name?: string;
   seller_name?: string;
   is_imported?: boolean;
+  officer_overrides?: Record<string, OfficerOverride>;
 };
 
 export type ScanSummary = {
@@ -355,3 +365,312 @@ export async function checkHealth(): Promise<boolean> {
     return false;
   }
 }
+
+// ---------------------------------------------------------------------------
+export async function generateReportBlob(
+  file: File | Blob,
+  scan: ScanResponse,
+  format: ReportFormat = "pdf"
+): Promise<Blob> {
+  const form = new FormData();
+  form.append("file", file, file instanceof File ? file.name : "evidence.jpg");
+  form.append("payload", JSON.stringify(scan));
+
+  const res = await apiFetch(`${API_BASE_URL}/report/${format}`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.blob();
+}
+
+// ---------------------------------------------------------------------------
+// Phase C1: Officer Overrides
+// ---------------------------------------------------------------------------
+export async function applyOfficerOverride(
+  scanId: string,
+  field: string,
+  value: string,
+  reason: string
+): Promise<StoredScan> {
+  const res = await apiFetch(
+    `${API_BASE_URL}/scans/${encodeURIComponent(scanId)}/override`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field, value, reason }),
+    }
+  );
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Phase C2: E-Commerce Mismatch Checker
+// ---------------------------------------------------------------------------
+export type MockListing = {
+  id: string;
+  product_name: string;
+  aliases?: string[];
+  barcode?: string;
+  platform?: string;
+  marketplace?: string;
+  seller_name?: string;
+  listing_url?: string;
+  image_url?: string;
+  declarations?: {
+    manufacturer?: string;
+    net_quantity?: string;
+    mrp?: string;
+    country_of_origin?: string;
+    manufacture_date?: string;
+    consumer_care?: string;
+  };
+};
+
+export type MismatchComparisonField = {
+  field: string;
+  status: "MATCH" | "MISMATCH" | "MISSING_PHYSICAL" | "MISSING_ONLINE" | string;
+  physical_value: string | null;
+  online_value: string | null;
+  rule_reference: string;
+  details: string;
+};
+
+export type MismatchComparisonResult = {
+  matched_listing?: MockListing | null;
+  online_listing?: MockListing | null;
+  overall_status?: "COMPLIANT" | "MISMATCH_DETECTED" | "NO_LISTING_FOUND" | string;
+  is_concordant?: boolean;
+  match_count?: number;
+  mismatch_count?: number;
+  total_fields?: number;
+  fields?: Record<string, MismatchComparisonField>;
+  comparison?: {
+    is_concordant: boolean;
+    match_count: number;
+    mismatch_count: number;
+    total_fields: number;
+    fields: Record<string, MismatchComparisonField>;
+  };
+  message?: string;
+};
+
+export async function fetchMockListings(): Promise<MockListing[]> {
+  const res = await apiFetch(`${API_BASE_URL}/mock-listings`);
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+export async function compareScanListing(
+  scanId: string,
+  params?: { product_name?: string; barcode?: string; listing_id?: string }
+): Promise<MismatchComparisonResult> {
+  const res = await apiFetch(
+    `${API_BASE_URL}/scans/${encodeURIComponent(scanId)}/compare-listing`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params || {}),
+    }
+  );
+  if (!res.ok) throw await parseError(res);
+  const data = await res.json();
+  // Ensure both direct fields and comparison wrapper are accessible
+  if (data && !data.comparison && data.fields) {
+    data.comparison = {
+      is_concordant: data.is_concordant ?? true,
+      match_count: data.match_count ?? 0,
+      mismatch_count: data.mismatch_count ?? 0,
+      total_fields: data.total_fields ?? Object.keys(data.fields).length,
+      fields: data.fields,
+    };
+  }
+  if (data && !data.online_listing && data.matched_listing) {
+    data.online_listing = data.matched_listing;
+  }
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Phase C3: Seller Risk Queue & Compliance Profile
+// ---------------------------------------------------------------------------
+export type RiskQueueSeller = {
+  seller_name: string;
+  total_scans: number;
+  violations: number;
+  reviews: number;
+  compliant: number;
+  last_scan: string;
+  risk_score: number;
+  risk_level: "critical" | "elevated" | "routine";
+};
+
+export async function fetchRiskQueue(): Promise<RiskQueueSeller[]> {
+  const res = await apiFetch(`${API_BASE_URL}/sellers/risk-queue`);
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+export type RepeatClause = {
+  rule_reference: string;
+  times_violated: number;
+  statutory_title?: string;
+};
+
+export type ScoreBreakdown = {
+  base_violation_deductions: number;
+  repeat_violation_surcharge: number;
+  compliant_credits: number;
+};
+
+export type MonthlyTrendItem = {
+  month: string;
+  violations: number;
+  compliant: number;
+  total_scans: number;
+};
+
+export type ChronologicalViolation = {
+  scan_id: string;
+  created_at?: string;
+  date?: string;
+  product_name: string;
+  field: string;
+  rule_reference: string;
+  rule_description?: string;
+  penalty_clause?: string;
+  findings?: string;
+  is_repeat?: boolean;
+  repeat_count?: number;
+};
+
+export type SellerComplianceHistory = {
+  seller_name: string;
+  entity?: string;
+  type?: string;
+  trust_score: number;
+  risk_level: "LOW_RISK" | "MODERATE_RISK" | "HIGH_RISK" | string;
+  risk_label: string;
+  total_scans: number;
+  compliant_count: number;
+  review_count: number;
+  violations_count: number;
+  repeat_violation_count: number;
+  repeat_clauses: RepeatClause[];
+  score_breakdown: ScoreBreakdown;
+  monthly_trend: MonthlyTrendItem[];
+  chronological_violations: ChronologicalViolation[];
+  overall_status_counts?: Record<string, number>;
+  compliance_rate?: number;
+  common_violations?: Array<{ field: string; count: number }>;
+  history?: Array<{
+    id: string;
+    created_at: string;
+    product_name: string;
+    overall_status: string;
+    score: number;
+    violations_count: number;
+  }>;
+};
+
+export async function fetchSellerCompliance(
+  sellerName: string
+): Promise<SellerComplianceHistory> {
+  const res = await apiFetch(
+    `${API_BASE_URL}/sellers/${encodeURIComponent(sellerName)}/history`
+  );
+  if (!res.ok) throw await parseError(res);
+  const data = await res.json();
+
+  // Normalize data for SellerComplianceGraph if returned from basic entity history
+  const historyItems = data.history || [];
+  const compliantCount = historyItems.filter((h: any) => h.overall_status === "COMPLIANT").length;
+  const reviewCount = historyItems.filter((h: any) => h.overall_status === "NEEDS_REVIEW").length;
+  const violationsCount = historyItems.filter((h: any) => h.overall_status === "NON_COMPLIANT").length;
+  const total = Math.max(historyItems.length, 1);
+
+  const trustScore = Math.max(0, Math.min(100, Math.round(100 - (violationsCount * 18 + reviewCount * 6) / total * 10)));
+  const riskLevel = trustScore >= 75 ? "LOW_RISK" : trustScore >= 45 ? "MODERATE_RISK" : "HIGH_RISK";
+  const riskLabel = riskLevel === "LOW_RISK" ? "Low Risk" : riskLevel === "MODERATE_RISK" ? "Moderate Risk" : "High Risk";
+
+  return {
+    seller_name: data.seller_name || data.entity || sellerName,
+    entity: data.entity || sellerName,
+    type: data.type || "seller",
+    trust_score: data.trust_score ?? trustScore,
+    risk_level: data.risk_level ?? riskLevel,
+    risk_label: data.risk_label ?? riskLabel,
+    total_scans: data.total_scans ?? historyItems.length,
+    compliant_count: data.compliant_count ?? compliantCount,
+    review_count: data.review_count ?? reviewCount,
+    violations_count: data.violations_count ?? violationsCount,
+    repeat_violation_count: data.repeat_violation_count ?? Math.max(0, violationsCount - 1),
+    repeat_clauses: data.repeat_clauses || [],
+    score_breakdown: data.score_breakdown || {
+      base_violation_deductions: violationsCount * 8,
+      repeat_violation_surcharge: Math.max(0, violationsCount - 1) * 15,
+      compliant_credits: compliantCount * 4,
+    },
+    monthly_trend: data.monthly_trend || [
+      { month: "Current", violations: violationsCount, compliant: compliantCount, total_scans: historyItems.length }
+    ],
+    chronological_violations: data.chronological_violations || [],
+    overall_status_counts: data.overall_status_counts || {},
+    compliance_rate: data.compliance_rate ?? Math.round((compliantCount / total) * 100),
+    common_violations: data.common_violations || [],
+    history: historyItems,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase C4: "Ask METRA" Statutory Legal Assistant
+// ---------------------------------------------------------------------------
+export type AssistantSections = {
+  legal_reference?: string;
+  act_section?: string;
+  statutory_requirement?: string;
+  officer_guidance?: string;
+  penal_sanction?: string;
+  source?: string;
+  source_authority?: string;
+  inspection_finding?: {
+    product: string;
+    status: string;
+    findings: string;
+    rule_reference: string;
+  };
+};
+
+export type AssistantResponse = {
+  question: string;
+  answer: string;
+  sections?: AssistantSections;
+  primary_clause: {
+    id: string;
+    clause_ref: string;
+    title: string;
+    act_section: string;
+  };
+  matched_clauses: Array<{
+    id: string;
+    clause_ref: string;
+    title: string;
+    relevance_score: number;
+  }>;
+};
+
+export async function askAssistant(
+  question: string,
+  scanId?: string
+): Promise<AssistantResponse> {
+  const res = await apiFetch(`${API_BASE_URL}/assistant/ask`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, scan_id: scanId || null }),
+  });
+  if (!res.ok) throw await parseError(res);
+  return res.json();
+}
+
+
